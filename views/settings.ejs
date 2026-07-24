@@ -1,0 +1,56 @@
+<%- include('partials/head') %>
+<%- include('partials/sidebar', { activePage: 'settings' }) %>
+<div class="main-content">
+  <%- include('partials/header', { pageTitle: 'Settings' }) %>
+  <%- include('partials/alerts') %>
+  <div class="content-area">
+    <div class="card" style="max-width: 800px;">
+      <form action="/settings" method="POST">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="company_name">Company Name</label>
+            <input type="text" id="company_name" name="company_name" class="form-control" value="<%= settings.company_name %>">
+          </div>
+          <div class="form-group">
+            <label for="company_phone">Phone Number</label>
+            <input type="text" id="company_phone" name="company_phone" class="form-control" value="<%= settings.company_phone %>">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="company_email">Email Address</label>
+            <input type="email" id="company_email" name="company_email" class="form-control" value="<%= settings.company_email %>">
+          </div>
+          <div class="form-group">
+            <label for="company_gstin">GSTIN</label>
+            <input type="text" id="company_gstin" name="company_gstin" class="form-control" value="<%= settings.company_gstin %>">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="company_address">Company Address</label>
+          <textarea id="company_address" name="company_address" class="form-control" rows="2"><%= settings.company_address %></textarea>
+        </div>
+
+        <div class="form-row" style="border-top:1px solid rgba(148,163,184,0.1); padding-top:20px; margin-top:20px;">
+          <div class="form-group">
+            <label for="default_tax_rate">Default Tax Rate (%)</label>
+            <input type="number" id="default_tax_rate" name="default_tax_rate" class="form-control" value="<%= settings.default_tax_rate %>">
+          </div>
+          <div class="form-group">
+            <label for="invoice_prefix">Invoice Prefix</label>
+            <input type="text" id="invoice_prefix" name="invoice_prefix" class="form-control" value="<%= settings.invoice_prefix %>">
+          </div>
+          <div class="form-group">
+            <label for="low_stock_threshold">Low Stock Alert Threshold</label>
+            <input type="number" id="low_stock_threshold" name="low_stock_threshold" class="form-control" value="<%= settings.low_stock_threshold %>">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">Save Settings</button>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('partials/footer') %>

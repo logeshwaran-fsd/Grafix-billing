@@ -1,0 +1,122 @@
+<%- include('partials/head') %>
+<%- include('partials/sidebar', { activePage: 'dashboard' }) %>
+<div class="main-content">
+  <%- include('partials/header', { pageTitle: 'Dashboard' }) %>
+  <%- include('partials/alerts') %>
+  <div class="content-area">
+    <div class="grid grid-4">
+      <div class="card stat-card accent-teal">
+        <div class="stat-icon">💰</div>
+        <div class="stat-value">₹<%= (todaySales.total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
+        <div class="stat-label">Today's Sales (<%= todaySales.count || 0 %> bills)</div>
+      </div>
+      <div class="card stat-card accent-blue">
+        <div class="stat-icon">📦</div>
+        <div class="stat-value"><%= totalProducts %></div>
+        <div class="stat-label">Total Products</div>
+      </div>
+      <div class="card stat-card accent-amber">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-value"><%= lowStockCount %></div>
+        <div class="stat-label">Low Stock Items</div>
+      </div>
+      <div class="card stat-card accent-purple">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value"><%= totalCustomers %></div>
+        <div class="stat-label">Total Customers</div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top: 20px;">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Sales Analytics (Last 7 Days)</h3>
+        </div>
+        <div style="height: 300px; position: relative;">
+          <canvas id="salesChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Low Stock Alerts</h3>
+        </div>
+        <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Product</th>
+                <th>Stock</th>
+                <th>Reorder</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (lowStockItems.length === 0) { %>
+                <tr><td colspan="4" class="table-empty">All stock levels healthy! ✅</td></tr>
+              <% } %>
+              <% lowStockItems.forEach(item => { %>
+                <tr>
+                  <td><span class="badge badge-default"><%= item.code %></span></td>
+                  <td><%= item.name %></td>
+                  <td><span class="badge badge-danger"><%= item.stock_quantity %> <%= item.unit %></span></td>
+                  <td><%= item.reorder_level %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <div class="card-header">
+        <h3 class="card-title">Recent Invoices</h3>
+        <a href="/billing" class="btn btn-secondary btn-sm">View All Invoices</a>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Customer</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (recentInvoices.length === 0) { %>
+              <tr><td colspan="5" class="table-empty">No invoices raised yet</td></tr>
+            <% } %>
+            <% recentInvoices.forEach(inv => { %>
+              <tr>
+                <td><a href="/billing/<%= inv.id %>" class="fw-bold text-accent"><%= inv.invoice_number %></a></td>
+                <td><%= inv.customer_name || 'Walk-in Customer' %></td>
+                <td>₹<%= inv.total_amount.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></td>
+                <td>
+                  <% if (inv.payment_status === 'paid') { %>
+                    <span class="badge badge-success">Paid</span>
+                  <% } else if (inv.payment_status === 'pending') { %>
+                    <span class="badge badge-warning">Pending</span>
+                  <% } else { %>
+                    <span class="badge badge-danger">Cancelled</span>
+                  <% } %>
+                </td>
+                <td><%= new Date(inv.created_at).toLocaleDateString('en-IN') %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const rawData = <%- JSON.stringify(salesData) %>;
+    initDashboardChart(rawData);
+  });
+</script>
+<%- include('partials/footer') %>

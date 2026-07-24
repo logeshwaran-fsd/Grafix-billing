@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'categories' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Categories' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="grid grid-3">
+      <div class="card" style="grid-column: span 1;">
+        <div class="card-header"><h3 class="card-title">Add New Category</h3></div>
+        <form action="/categories/add" method="POST">
+          <div class="form-group">
+            <label for="name">Category Name *</label>
+            <input type="text" id="name" name="name" class="form-control" required placeholder="e.g. Polymer Plates">
+          </div>
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Category description"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-3">Add Category</button>
+        </form>
+      </div>
+
+      <div class="card" style="grid-column: span 2;">
+        <div class="card-header"><h3 class="card-title">All Categories</h3></div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Category Name</th>
+                <th>Description</th>
+                <th class="text-center">Products Count</th>
+                <th class="no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (categories.length === 0) { %>
+                <tr><td colspan="4" class="table-empty">No categories added yet</td></tr>
+              <% } %>
+              <% categories.forEach(cat => { %>
+                <tr>
+                  <td class="fw-bold"><%= cat.name %></td>
+                  <td class="text-secondary"><%= cat.description || 'No description' %></td>
+                  <td class="text-center"><span class="badge badge-default"><%= cat.product_count %></span></td>
+                  <td class="no-print">
+                    <form action="/categories/delete/<%= cat.id %>" method="POST" class="confirm-delete d-inline">
+                      <button type="submit" class="btn btn-danger btn-sm" <%= cat.product_count > 0 ? 'disabled' : '' %>>Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,8 @@
+<div class="header-bar no-print">
+  <h1><%= pageTitle %></h1>
+  <div class="header-user">
+    <span class="badge badge-purple"><%= user ? user.role.toUpperCase() : '' %></span>
+    <span class="fw-600"><%= user ? user.full_name : '' %></span>
+    <a href="/logout" class="btn btn-secondary btn-sm" style="padding:6px 12px;">Logout</a>
+  </div>
+</div>

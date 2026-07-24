@@ -1,0 +1,47 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'inventory' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Stock Transaction History' }) %>
+  <div class="content-area">
+    <div class="mb-3">
+      <a href="/inventory" class="btn btn-secondary">← Back to Stock</a>
+    </div>
+
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Code</th>
+              <th>Product Name</th>
+              <th>Type</th>
+              <th>Change Qty</th>
+              <th>Billed/Adjusted By</th>
+              <th>Notes / Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (transactions.length === 0) { %>
+              <tr><td colspan="7" class="table-empty">No transactions found</td></tr>
+            <% } %>
+            <% transactions.forEach(tx => { %>
+              <tr>
+                <td><%= new Date(tx.created_at).toLocaleString('en-IN') %></td>
+                <td><span class="badge badge-default"><%= tx.product_code %></span></td>
+                <td class="fw-bold"><%= tx.product_name %></td>
+                <td class="text-uppercase"><span class="badge <%= tx.type==='sale' ? 'badge-info' : (tx.type==='purchase'?'badge-success':'badge-warning') %>"><%= tx.type %></span></td>
+                <td class="fw-bold <%= tx.quantity > 0 ? 'text-success' : 'text-danger' %>">
+                  <%= tx.quantity > 0 ? '+' : '' %><%= tx.quantity %>
+                </td>
+                <td><%= tx.user_name || 'System' %></td>
+                <td><%= tx.notes %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

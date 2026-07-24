@@ -1,0 +1,59 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'customers' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: customer ? 'Edit Customer' : 'Add Customer' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="card" style="max-width:800px;">
+      <form action="<%= customer ? '/customers/edit/' + customer.id : '/customers/add' %>" method="POST">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="name">Customer/Business Name *</label>
+            <input type="text" id="name" name="name" class="form-control" value="<%= customer ? customer.name : '' %>" required>
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="text" id="phone" name="phone" class="form-control" value="<%= customer ? customer.phone : '' %>">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" class="form-control" value="<%= customer ? customer.email : '' %>">
+          </div>
+          <div class="form-group">
+            <label for="gstin">GSTIN (Optional)</label>
+            <input type="text" id="gstin" name="gstin" class="form-control" value="<%= customer ? customer.gstin : '' %>" placeholder="e.g. 33AAAAA1111A1Z1">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="address">Address</label>
+          <textarea id="address" name="address" class="form-control" rows="2"><%= customer ? customer.address : '' %></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="city">City</label>
+            <input type="text" id="city" name="city" class="form-control" value="<%= customer ? customer.city : 'Chennai' %>">
+          </div>
+          <div class="form-group">
+            <label for="state">State</label>
+            <input type="text" id="state" name="state" class="form-control" value="<%= customer ? customer.state : 'Tamil Nadu' %>">
+          </div>
+          <div class="form-group">
+            <label for="pincode">Pincode</label>
+            <input type="text" id="pincode" name="pincode" class="form-control" value="<%= customer ? customer.pincode : '' %>">
+          </div>
+        </div>
+
+        <div class="btn-group mt-3">
+          <button type="submit" class="btn btn-primary">Save Customer</button>
+          <a href="/customers" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

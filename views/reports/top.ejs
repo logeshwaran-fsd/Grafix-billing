@@ -1,0 +1,41 @@
+﻿<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'reports' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Top Products' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="mb-3 d-flex justify-between align-center">
+      <a href="/reports" class="btn btn-secondary btn-sm">â† Back to Reports</a>
+    </div>
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Code</th>
+              <th>Product Name</th>
+              <th class="text-center">Quantity Sold</th>
+              <th class="text-right">Total Revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (topProducts.length === 0) { %>
+              <tr><td colspan="5" class="table-empty">No sales history found</td></tr>
+            <% } %>
+            <% topProducts.forEach((item, index) => { %>
+              <tr>
+                <td><%= index + 1 %></td>
+                <td><span class="badge badge-default"><%= item.product_code %></span></td>
+                <td><%= item.product_name %></td>
+                <td class="text-center"><%= item.qty_sold %></td>
+                <td class="text-right text-success fw-bold">â‚¹<%= item.total_revenue.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,81 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'inventory' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Adjust Stock' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="mb-3">
+      <a href="/inventory" class="btn btn-secondary">← Back to Stock</a>
+    </div>
+
+    <div class="grid grid-3">
+      <!-- Form Card -->
+      <div class="card" style="grid-column: span 1;">
+        <div class="card-header"><h3 class="card-title">Stock Adjustment Form</h3></div>
+        <div class="mb-3">
+          <p class="text-secondary small">Product Code:</p>
+          <p class="fw-bold"><span class="badge badge-default"><%= product.code %></span></p>
+          <p class="text-secondary small mt-2">Product Name:</p>
+          <p class="fw-bold"><%= product.name %></p>
+          <p class="text-secondary small mt-2">Current Stock:</p>
+          <p class="fw-bold fs-xl text-accent"><%= product.stock_quantity %> <%= product.unit %></p>
+        </div>
+
+        <form action="/inventory/adjust/<%= product.id %>" method="POST">
+          <div class="form-group">
+            <label for="type">Adjustment Type *</label>
+            <select id="type" name="type" class="form-control" required>
+              <option value="purchase">Add Stock (Purchase / Inward)</option>
+              <option value="adjustment">Adjust Stock (Correction / Loss)</option>
+              <option value="return">Customer Return</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="quantity">Quantity *</label>
+            <input type="number" id="quantity" name="quantity" class="form-control" min="1" required placeholder="Enter positive number">
+          </div>
+          <div class="form-group">
+            <label for="notes">Notes / Reason *</label>
+            <textarea id="notes" name="notes" class="form-control" rows="3" required placeholder="Describe the reason for adjustment..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-3">Confirm Adjustment</button>
+        </form>
+      </div>
+
+      <!-- Log Card -->
+      <div class="card" style="grid-column: span 2;">
+        <div class="card-header"><h3 class="card-title">Recent Changes Log</h3></div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Qty Change</th>
+                <th>Billed/Handled By</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (transactions.length === 0) { %>
+                <tr><td colspan="5" class="table-empty">No transaction history found for this product</td></tr>
+              <% } %>
+              <% transactions.forEach(tx => { %>
+                <tr>
+                  <td><%= new Date(tx.created_at).toLocaleString('en-IN') %></td>
+                  <td class="text-uppercase"><%= tx.type %></td>
+                  <td class="fw-bold <%= tx.quantity > 0 ? 'text-success' : 'text-danger' %>">
+                    <%= tx.quantity > 0 ? '+' : '' %><%= tx.quantity %>
+                  </td>
+                  <td><%= tx.user_name || 'System' %></td>
+                  <td><%= tx.notes %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

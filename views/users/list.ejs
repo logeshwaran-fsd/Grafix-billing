@@ -1,0 +1,82 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'users' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'User Management' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="grid grid-3">
+      <!-- Add User Form -->
+      <div class="card" style="grid-column: span 1;">
+        <div class="card-header"><h3 class="card-title">Create User Account</h3></div>
+        <form action="/users/add" method="POST">
+          <div class="form-group">
+            <label for="username">Username *</label>
+            <input type="text" id="username" name="username" class="form-control" required placeholder="e.g. cashier1">
+          </div>
+          <div class="form-group">
+            <label for="password">Password *</label>
+            <input type="password" id="password" name="password" class="form-control" required placeholder="Enter password">
+          </div>
+          <div class="form-group">
+            <label for="full_name">Full Name *</label>
+            <input type="text" id="full_name" name="full_name" class="form-control" required placeholder="e.g. Ramesh Kumar">
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" class="form-control" placeholder="e.g. ramesh@gmail.com">
+          </div>
+          <div class="form-group">
+            <label for="role">User Role *</label>
+            <select id="role" name="role" class="form-control" required>
+              <option value="cashier">Cashier</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-3">Add User Account</button>
+        </form>
+      </div>
+
+      <!-- Users List -->
+      <div class="card" style="grid-column: span 2;">
+        <div class="card-header"><h3 class="card-title">All User Accounts</h3></div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Full Name</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th class="no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach(u => { %>
+                <tr>
+                  <td class="fw-bold"><%= u.username %></td>
+                  <td><%= u.full_name %></td>
+                  <td><span class="badge <%= u.role==='admin'?'badge-purple':'badge-info' %>"><%= u.role.toUpperCase() %></span></td>
+                  <td><%= u.email || '-' %></td>
+                  <td>
+                    <span class="badge <%= u.is_active===1?'badge-success':'badge-danger' %>">
+                      <%= u.is_active===1?'ACTIVE':'DISABLED' %>
+                    </span>
+                  </td>
+                  <td class="no-print">
+                    <form action="/users/toggle/<%= u.id %>" method="POST" class="d-inline">
+                      <button type="submit" class="btn <%= u.is_active===1?'btn-danger':'btn-success' %> btn-sm">
+                        <%= u.is_active===1?'Disable':'Enable' %>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

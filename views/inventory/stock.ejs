@@ -1,0 +1,371 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'inventory' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Stock Management' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="grid grid-4" style="margin-bottom: 24px;">
+      <div class="card stat-card accent-teal">
+        <div class="stat-value"><%= stats.total || 0 %></div>
+        <div class="stat-label">Total Active Products</div>
+      </div>
+      <div class="card stat-card accent-green">
+        <div class="stat-value"><%= stats.ok || 0 %></div>
+        <div class="stat-label">In Stock (Healthy)</div>
+      </div>
+      <div class="card stat-card accent-amber">
+        <div class="stat-value"><%= stats.low || 0 %></div>
+        <div class="stat-label">Low Stock Alerts</div>
+      </div>
+      <div class="card stat-card accent-danger">
+        <div class="stat-value"><%= stats.out || 0 %></div>
+        <div class="stat-label">Out of Stock</div>
+      </div>
+    </div>
+
+    <div class="mb-3 d-flex justify-between align-center">
+      <form action="/inventory" method="GET" class="form-inline flex-grow-1" style="max-width:400px;">
+        <input type="text" name="search" class="form-control" placeholder="Search by name, code..." value="<%= search %>">
+        <button type="submit" class="btn btn-primary">Search</button>
+        <% if (search) { %>
+          <a href="/inventory" class="btn btn-secondary">Clear</a>
+        <% } %>
+      </form>
+      <a href="/inventory/transactions" class="btn btn-secondary">Stock Transaction Logs</a>
+    </div>
+
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th>Current Stock</th>
+              <th>Reorder Level</th>
+              <th>Unit</th>
+              <th>Status</th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (products.length === 0) { %>
+              <tr><td colspan="8" class="table-empty">No products found</td></tr>
+            <% } %>
+            <% products.forEach(prod => { %>
+              <tr data-id="<%= prod.id %>">
+                <td><span class="badge badge-default"><%= prod.code %></span></td>
+                <td class="fw-bold"><%= prod.name %></td>
+                <td><%= prod.category_name || 'Uncategorized' %></td>
+                <td><strong class="fs-lg stock-qty-value"><%= prod.stock_quantity %></strong></td>
+                <td><%= prod.reorder_level %></td>
+                <td><%= prod.unit %></td>
+                <td>
+                  <div class="status-cell-wrapper">
+                    <% if (prod.stock_quantity <= 0) { %>
+                      <span class="badge badge-danger">Out of Stock</span>
+                      <button class="btn btn-danger btn-sm restock-badge-btn" onclick="openRestockModal('<%= prod.id %>', '<%= prod.name.replace(/'/g, `\\'`).replace(/"/g, `\\\"`) %>', '<%= prod.code %>', <%= prod.stock_quantity %>, this)" style="padding: 2px 6px; font-size: 10px; font-weight:700; width:100%; border:none; background:#ef4444; margin-top:4px; display:block; text-align:center; border-radius:4px; cursor:pointer;">RESTOCK ➕</button>
+                    <% } else if (prod.stock_quantity <= prod.reorder_level) { %>
+                      <span class="badge badge-warning">Low Stock</span>
+                    <% } else { %>
+                      <span class="badge badge-success">In Stock</span>
+                    <% } %>
+                  </div>
+                </td>
+                <td class="no-print">
+                  <div style="display:flex; gap:6px;">
+                    <a href="/inventory/adjust/<%= prod.id %>" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:12px;">History</a>
+                    <button class="btn btn-success btn-sm" 
+                            onclick="openRestockModal('<%= prod.id %>', '<%= prod.name.replace(/'/g, `\\'`).replace(/"/g, `\\\"`) %>', '<%= prod.code %>', <%= prod.stock_quantity %>, this)"
+                            style="background:var(--success); border:none; padding:4px 8px; font-size:12px; font-weight:600; cursor:pointer; color:#fff; border-radius:6px;">
+                      Quick Add ➕
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Styles -->
+<style>
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.modal-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  width: 100%;
+  max-width: 500px;
+  padding: 30px;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-20px);
+  transition: all 0.3s ease;
+}
+
+.modal-card.show {
+  transform: translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 15px;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 24px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: var(--danger);
+}
+
+.modal-body .form-group {
+  margin-bottom: 15px;
+}
+
+.modal-body label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+</style>
+
+<!-- Quick Restock Modal -->
+<div class="modal-overlay" id="restockModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="modalProductTitle">Quick Stock Adjustment</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <form id="quickRestockForm">
+      <input type="hidden" id="modalProductId">
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Product Details</label>
+          <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span id="modalProductCode" class="badge badge-default">CODE</span>
+              <span style="font-weight: 500; font-size:13px;">Current Stock: <strong id="modalCurrentStock" style="color:var(--accent);">0</strong></span>
+            </div>
+            <div id="modalProductName" style="margin-top:8px; font-weight:700; font-size:15px; color:#fff;">Product Name</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="modalQuantity">Quantity to Add *</label>
+          <input type="number" id="modalQuantity" class="form-control" placeholder="Enter quantity (e.g. 50)" required min="1" autofocus style="width:100%; height:42px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:10px; color:#fff; font-size:15px;">
+        </div>
+        <div class="form-group">
+          <label for="modalType">Adjustment Type</label>
+          <select id="modalType" class="form-control" style="width:100%; height:42px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:10px; color:#fff; font-size:15px;">
+            <option value="purchase" selected>Purchase (Restocking)</option>
+            <option value="return">Customer Return</option>
+            <option value="adjustment">Manual Adjustment (+)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="modalNotes">Notes / Reference</label>
+          <input type="text" id="modalNotes" class="form-control" placeholder="e.g. Supplier Invoice #1024" value="Quick restock" style="width:100%; height:42px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:10px; color:#fff; font-size:15px;">
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()" style="padding:8px 16px;">Cancel</button>
+        <button type="submit" class="btn btn-success" id="modalSubmitBtn" style="padding:8px 16px; background:var(--success); border:none; color:#fff; font-weight:600; border-radius:6px; cursor:pointer;">Update Stock</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Control Scripts -->
+<script>
+const modal = document.getElementById('restockModal');
+const modalProductTitle = document.getElementById('modalProductTitle');
+const modalProductId = document.getElementById('modalProductId');
+const modalProductCode = document.getElementById('modalProductCode');
+const modalCurrentStock = document.getElementById('modalCurrentStock');
+const modalProductName = document.getElementById('modalProductName');
+const modalQuantity = document.getElementById('modalQuantity');
+const modalType = document.getElementById('modalType');
+const modalNotes = document.getElementById('modalNotes');
+const quickRestockForm = document.getElementById('quickRestockForm');
+const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+
+let activeRowStockCell = null;
+let activeRowBadgeCell = null;
+let activeRowId = null;
+
+// Open modal function
+function openRestockModal(id, name, code, currentStock, btnElement) {
+  modalProductId.value = id;
+  modalProductName.textContent = name;
+  modalProductCode.textContent = code;
+  modalCurrentStock.textContent = currentStock;
+  modalQuantity.value = '';
+  modalNotes.value = 'Quick restock';
+  modalType.value = 'purchase';
+  
+  // Keep track of the table cells we need to update
+  const row = btnElement.closest('tr');
+  activeRowId = id;
+  activeRowStockCell = row.querySelector('.stock-qty-value');
+  activeRowBadgeCell = row.querySelector('.status-cell-wrapper');
+  
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    modal.querySelector('.modal-card').classList.add('show');
+    modalQuantity.focus();
+  }, 50);
+}
+
+// Close modal function
+function closeModal() {
+  modal.querySelector('.modal-card').classList.remove('show');
+  setTimeout(() => {
+    modal.style.display = 'none';
+  }, 200);
+}
+
+// Close on background click
+window.addEventListener('click', (e) => {
+  if (e.target === modal) {
+    closeModal();
+  }
+});
+
+// Submit handler
+quickRestockForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const id = modalProductId.value;
+  const quantity = parseInt(modalQuantity.value);
+  const type = modalType.value;
+  const notes = modalNotes.value;
+  
+  if (!quantity || quantity <= 0) return;
+  
+  modalSubmitBtn.disabled = true;
+  modalSubmitBtn.textContent = 'Updating...';
+  
+  try {
+    const response = await fetch(`/inventory/api/adjust/${id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ type, quantity, notes })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      // Update cell values dynamically!
+      if (activeRowStockCell) {
+        activeRowStockCell.textContent = result.newStock;
+      }
+      
+      // Update badge/status cell dynamically
+      if (activeRowBadgeCell) {
+        const row = activeRowStockCell.closest('tr');
+        const reorderLevel = parseInt(row.cells[4].textContent);
+        
+        let badgeHtml = '';
+        if (result.newStock <= 0) {
+          badgeHtml = `
+            <span class="badge badge-danger">Out of Stock</span>
+            <button class="btn btn-danger btn-sm restock-badge-btn" onclick="openRestockModal('${id}', '${modalProductName.textContent.replace(/'/g, "\\'")}', '${modalProductCode.textContent}', ${result.newStock}, this)" style="padding: 2px 6px; font-size: 10px; font-weight:700; width:100%; border:none; background:#ef4444; margin-top:4px; display:block; text-align:center; border-radius:4px; cursor:pointer;">RESTOCK ➕</button>
+          `;
+        } else if (result.newStock <= reorderLevel) {
+          badgeHtml = '<span class="badge badge-warning">Low Stock</span>';
+        } else {
+          badgeHtml = '<span class="badge badge-success">In Stock</span>';
+        }
+        activeRowBadgeCell.innerHTML = badgeHtml;
+      }
+      
+      // Show mini floating alert/notification
+      showToast('Stock updated successfully!');
+      closeModal();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to connect to the server.');
+  } finally {
+    modalSubmitBtn.disabled = false;
+    modalSubmitBtn.textContent = 'Update Stock';
+  }
+});
+
+// Simple floating notification (toast)
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.style.position = 'fixed';
+  toast.style.bottom = '20px';
+  toast.style.right = '20px';
+  toast.style.background = 'var(--success)';
+  toast.style.color = '#fff';
+  toast.style.padding = '12px 24px';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+  toast.style.zIndex = '3000';
+  toast.style.fontWeight = 'bold';
+  toast.style.transition = 'all 0.3s ease';
+  toast.style.opacity = '0';
+  toast.style.transform = 'translateY(10px)';
+  
+  document.body.appendChild(toast);
+  toast.textContent = message;
+  
+  // Animate in
+  setTimeout(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  }, 50);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
+}
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,89 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'products' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Products' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="mb-3 d-flex justify-between align-center">
+      <form action="/products" method="GET" class="form-inline flex-grow-1" style="max-width:600px;">
+        <input type="text" name="search" class="form-control" placeholder="Search code, name..." value="<%= search %>" style="max-width:200px;">
+        <select name="category" class="form-control" style="max-width:200px;">
+          <option value="">All Categories</option>
+          <% categories.forEach(cat => { %>
+            <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <% if (search || selectedCategory) { %>
+          <a href="/products" class="btn btn-secondary">Clear</a>
+        <% } %>
+      </form>
+      <a href="/products/add" class="btn btn-primary">+ Add Product</a>
+    </div>
+
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th class="text-right">Unit Price</th>
+              <th class="text-right">Cost Price</th>
+              <th>Stock</th>
+              <th>Reorder</th>
+              <th>Unit</th>
+              <th>GST</th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (products.length === 0) { %>
+              <tr><td colspan="10" class="table-empty">No products found</td></tr>
+            <% } %>
+            <% products.forEach(prod => { %>
+              <tr>
+                <td><span class="badge badge-default"><%= prod.code %></span></td>
+                <td class="fw-bold"><%= prod.name %></td>
+                <td><%= prod.category_name || 'Uncategorized' %></td>
+                <td class="text-right">₹<%= prod.unit_price.toFixed(2) %></td>
+                <td class="text-right text-muted">₹<%= prod.cost_price.toFixed(2) %></td>
+                <td>
+                  <% if (prod.stock_quantity <= 0) { %>
+                    <span class="badge badge-danger">Out of Stock (0)</span>
+                  <% } else if (prod.stock_quantity <= prod.reorder_level) { %>
+                    <span class="badge badge-warning">Low (<%= prod.stock_quantity %>)</span>
+                  <% } else { %>
+                    <span class="badge badge-success"><%= prod.stock_quantity %></span>
+                  <% } %>
+                </td>
+                <td><%= prod.reorder_level %></td>
+                <td><%= prod.unit %></td>
+                <td><%= prod.gst_rate %>%</td>
+                <td class="no-print">
+                  <div class="btn-group">
+                    <a href="/products/edit/<%= prod.id %>" class="btn btn-secondary btn-sm">Edit</a>
+                    <form action="/products/delete/<%= prod.id %>" method="POST" class="confirm-delete d-inline">
+                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <% if (pagination.totalPages > 1) { %>
+        <div class="pagination">
+          <% for(let i=1; i<=pagination.totalPages; i++) { %>
+            <a href="/products?page=<%= i %>&search=<%= search %>&category=<%= selectedCategory %>" 
+               class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,154 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'billing' }) %>
+<% const isEst = (invoice.invoice_type === 'estimate'); %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Invoice Details' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="mb-3 d-flex gap-2 no-print" style="align-items: center;">
+      <a href="/billing" class="btn btn-secondary">← Back to Invoices</a>
+      
+      <% if (!isEst) { %>
+        <select id="print-copy-type" class="form-control" style="width: auto; height: 38px; display: inline-block; background: var(--bg-input); border: 1px solid var(--border); color:#fff; border-radius:8px; padding:0 10px;" onchange="updatePrintCopyBadge()">
+          <option value="original" selected>Original Copy (Buyer)</option>
+          <option value="duplicate">Duplicate Copy (Transporter)</option>
+          <option value="office">Office Copy</option>
+        </select>
+      <% } %>
+      
+      <button onclick="window.print()" class="btn btn-primary">Print Invoice 🖨️</button>
+      <button onclick="downloadPDF()" class="btn btn-success">Download PDF 📄</button>
+      <a href="/billing/new?clone=<%= invoice.id %>" class="btn btn-warning" style="background:#f59e0b; color:#fff; font-weight:600; border:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">Clone Bill 📄</a>
+      
+      <% if (invoice.payment_status !== 'cancelled') { %>
+        <form action="/billing/<%= invoice.id %>/cancel" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to cancel this invoice? This will restore stock levels.')">
+          <button type="submit" class="btn btn-danger">Cancel Invoice</button>
+        </form>
+      <% } %>
+    </div>
+
+    <div class="card invoice-print-area" id="invoice-card" style="background:#fff; color:#1e293b; max-width:850px; margin: 0 auto; padding:40px; border-radius:8px; border:1px solid #e2e8f0; font-family:'Inter', sans-serif;">
+      <!-- Invoice Header -->
+      <div style="display:flex; justify-content:space-between; border-bottom:2px solid #e2e8f0; padding-bottom:24px; margin-bottom:24px;">
+        <div>
+          <img src="/images/logo.png" alt="Logo" style="max-height: 45px; margin-bottom: 10px; display: block;">
+          <h2 style="font-size:24px; font-weight:800; color:#0f172a; margin-bottom:4px;"><%= settings.company_name || 'Grafix Impression' %></h2>
+          <p style="font-size:14px; color:#64748b; line-height:1.4;"><%= settings.company_address || 'Chennai' %><br>Phone: <%= settings.company_phone || '-' %><% if (!isEst) { %><br>GSTIN: <%= settings.company_gstin || '-' %><% } %></p>
+        </div>
+        <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
+          <% if (!isEst) { %>
+            <div id="print-copy-badge" style="border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
+              Original Copy (Buyer)
+            </div>
+          <% } %>
+          <h1 style="font-size:28px; font-weight:800; color:#14b8a6; margin-bottom:8px;"><%= isEst ? 'ESTIMATE' : 'INVOICE' %></h1>
+          <p style="font-size:14px; margin-bottom:4px;"><strong><%= isEst ? 'Estimate' : 'Invoice' %> #:</strong> <%= invoice.invoice_number %></p>
+          <p style="font-size:14px; margin-bottom:4px;"><strong>Date:</strong> <%= new Date(invoice.created_at).toLocaleDateString('en-IN') %></p>
+          <p style="font-size:14px;"><strong>Status:</strong> <span style="text-transform:uppercase; font-weight:700; color: <%= invoice.payment_status === 'paid' ? '#10b981' : (invoice.payment_status === 'pending' ? '#f59e0b' : '#ef4444') %>"><%= invoice.payment_status %></span></p>
+        </div>
+      </div>
+
+      <!-- Customer Details -->
+      <div style="margin-bottom:32px; background:#f8fafc; padding:16px; border-radius:6px; border:1px solid #e2e8f0;">
+        <h4 style="font-size:12px; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;"><%= isEst ? 'Estimate For:' : 'Billed To:' %></h4>
+        <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin-bottom:4px;"><%= invoice.customer_name || 'Walk-in Customer' %></h3>
+        <% if (invoice.customer_phone) { %><p style="font-size:14px; color:#475569; margin-bottom:2px;">Phone: <%= invoice.customer_phone %></p><% } %>
+        <% if (!isEst && invoice.customer_gstin) { %><p style="font-size:14px; color:#475569; margin-bottom:2px;">GSTIN: <%= invoice.customer_gstin %></p><% } %>
+        <% if (invoice.customer_address) { %><p style="font-size:14px; color:#475569;"><%= invoice.customer_address %></p><% } %>
+      </div>
+
+      <!-- Items Table -->
+      <table style="width:100%; border-collapse:collapse; margin-bottom:32px;">
+        <thead>
+          <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+            <th style="padding:12px; text-align:left; font-size:12px; font-weight:700; color:#475569;">#</th>
+            <th style="padding:12px; text-align:left; font-size:12px; font-weight:700; color:#475569;">Code</th>
+            <th style="padding:12px; text-align:left; font-size:12px; font-weight:700; color:#475569;">Product</th>
+            <th style="padding:12px; text-align:center; font-size:12px; font-weight:700; color:#475569;">Qty</th>
+            <th style="padding:12px; text-align:right; font-size:12px; font-weight:700; color:#475569;">Rate</th>
+            <th style="padding:12px; text-align:right; font-size:12px; font-weight:700; color:#475569;">Disc</th>
+            <% if (!isEst) { %>
+              <th style="padding:12px; text-align:center; font-size:12px; font-weight:700; color:#475569;">GST</th>
+            <% } %>
+            <th style="padding:12px; text-align:right; font-size:12px; font-weight:700; color:#475569;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% items.forEach((item, index) => { %>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:12px; font-size:14px;"><%= index + 1 %></td>
+              <td style="padding:12px; font-size:14px;"><%= item.product_code %></td>
+              <td style="padding:12px; font-size:14px; font-weight:600;"><%= item.product_name %></td>
+              <td style="padding:12px; font-size:14px; text-align:center;"><%= item.quantity %></td>
+              <td style="padding:12px; font-size:14px; text-align:right;">₹<%= item.unit_price.toFixed(2) %></td>
+              <td style="padding:12px; font-size:14px; text-align:right;">₹<%= item.discount.toFixed(2) %></td>
+              <% if (!isEst) { %>
+                <td style="padding:12px; font-size:14px; text-align:center;"><%= item.tax_rate %>%</td>
+              <% } %>
+              <td style="padding:12px; font-size:14px; text-align:right; font-weight:600;">₹<%= item.total.toFixed(2) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <!-- Summary -->
+      <div style="display:flex; justify-content:space-between;">
+        <div style="max-width:350px; font-size:13px; color:#64748b;">
+          <p style="margin-bottom:8px;"><strong>Payment Method:</strong> <span style="text-transform:uppercase;"><%= invoice.payment_method %></span></p>
+          <% if (invoice.notes) { %><p><strong>Notes:</strong> <%= invoice.notes %></p><% } %>
+        </div>
+        <div style="min-width:240px; font-size:14px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span>Subtotal:</span>
+            <span>₹<%= invoice.subtotal.toFixed(2) %></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; <%= isEst ? 'border-bottom:1px solid #e2e8f0; padding-bottom:8px;' : '' %>">
+            <span>Discount:</span>
+            <span>- ₹<%= invoice.discount_amount.toFixed(2) %></span>
+          </div>
+          <% if (!isEst) { %>
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+              <span>GST Tax:</span>
+              <span>₹<%= invoice.tax_amount.toFixed(2) %></span>
+            </div>
+          <% } %>
+          <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:800; color:#0f172a; margin-top:8px;">
+            <span>Grand Total:</span>
+            <span>₹<%= invoice.total_amount.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></span>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center; font-size:12px; color:#94a3b8; border-top:1px solid #e2e8f0; margin-top:40px; padding-top:16px;">
+        <%= isEst ? 'This is an estimate quotation' : 'Thank you for your business!' %>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  function updatePrintCopyBadge() {
+    const type = document.getElementById('print-copy-type').value;
+    const badge = document.getElementById('print-copy-badge');
+    if (!badge) return;
+    if (type === 'original') {
+      badge.textContent = 'Original Copy (Buyer)';
+    } else if (type === 'duplicate') {
+      badge.textContent = 'Duplicate Copy (Transporter)';
+    } else {
+      badge.textContent = 'Office Copy';
+    }
+  }
+
+  function downloadPDF() {
+    const element = document.getElementById('invoice-card');
+    const type = document.getElementById('print-copy-type') ? document.getElementById('print-copy-type').value : 'estimate';
+    const opt = {
+      margin:       10,
+      filename:     `Invoice_<%= invoice.invoice_number %>_${type}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().from(element).set(opt).save();
+  }
+</script>
+<%- include('../partials/footer') %>

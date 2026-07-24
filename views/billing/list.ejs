@@ -1,0 +1,86 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'billing' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Invoices' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="mb-3 d-flex justify-between align-center">
+      <form action="/billing" method="GET" class="form-inline flex-grow-1" style="max-width:850px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input type="text" name="search" class="form-control" placeholder="Search Invoice#, Customer..." value="<%= search %>" style="max-width:180px;">
+        <select name="status" class="form-control" style="max-width:130px;">
+          <option value="">All Statuses</option>
+          <option value="paid" <%= selectedStatus === 'paid' ? 'selected' : '' %>>Paid</option>
+          <option value="pending" <%= selectedStatus === 'pending' ? 'selected' : '' %>>Pending</option>
+          <option value="cancelled" <%= selectedStatus === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+        </select>
+        <span style="font-size:13px; color:var(--text-secondary);">From:</span>
+        <input type="date" name="from" class="form-control" value="<%= from %>" style="max-width:145px; height: 38px;">
+        <span style="font-size:13px; color:var(--text-secondary);">To:</span>
+        <input type="date" name="to" class="form-control" value="<%= to %>" style="max-width:145px; height: 38px;">
+        <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Filter</button>
+        <% if (search || selectedStatus || from || to) { %>
+          <a href="/billing" class="btn btn-secondary" style="padding: 8px 16px;">Clear</a>
+        <% } %>
+      </form>
+      <a href="/billing/new" class="btn btn-primary">+ New Invoice</a>
+    </div>
+
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th class="text-right">Subtotal</th>
+              <th class="text-right">Tax</th>
+              <th class="text-right">Total Amount</th>
+              <th class="text-center">Payment</th>
+              <th>Status</th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (invoices.length === 0) { %>
+              <tr><td colspan="9" class="table-empty">No invoices found</td></tr>
+            <% } %>
+            <% invoices.forEach(inv => { %>
+              <tr>
+                <td class="fw-bold text-accent"><%= inv.invoice_number %></td>
+                <td><%= new Date(inv.created_at).toLocaleDateString('en-IN') %></td>
+                <td><%= inv.customer_name || 'Walk-in Customer' %></td>
+                <td class="text-right">₹<%= inv.subtotal.toFixed(2) %></td>
+                <td class="text-right">₹<%= inv.tax_amount.toFixed(2) %></td>
+                <td class="text-right fw-bold">₹<%= inv.total_amount.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></td>
+                <td class="text-center text-uppercase fs-sm"><%= inv.payment_method %></td>
+                <td>
+                  <% if (inv.payment_status === 'paid') { %>
+                    <span class="badge badge-success">Paid</span>
+                  <% } else if (inv.payment_status === 'pending') { %>
+                    <span class="badge badge-warning">Pending</span>
+                  <% } else { %>
+                    <span class="badge badge-danger">Cancelled</span>
+                  <% } %>
+                </td>
+                <td class="no-print">
+                  <a href="/billing/<%= inv.id %>" class="btn btn-secondary btn-sm">View</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <% if (pagination.totalPages > 1) { %>
+        <div class="pagination">
+          <% for(let i=1; i<=pagination.totalPages; i++) { %>
+            <a href="/billing?page=<%= i %>&search=<%= search %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>" 
+               class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

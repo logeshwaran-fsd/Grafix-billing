@@ -1,0 +1,119 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'billing-new' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'New Invoice' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="grid grid-3">
+      <!-- Left 2 columns: POS Items selection & List -->
+      <div style="grid-column: span 2;">
+        <div class="card">
+          <div class="form-group autocomplete-wrapper" style="position:relative;">
+            <label for="product-search" class="fw-bold">Search Product (Code or Name)</label>
+            <input type="text" id="product-search" class="form-control" placeholder="Type product code or name to search..." autocomplete="off">
+            <div id="product-dropdown" class="autocomplete-dropdown" style="display:none; position:absolute; width:100%; z-index:1000; background:#1e293b; border:1px solid rgba(148,163,184,0.1); max-height:250px; overflow-y:auto; border-radius:8px; margin-top:4px;"></div>
+          </div>
+
+          <div class="table-container mt-3">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Code</th>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th class="text-right">Price</th>
+                  <th>Discount (₹)</th>
+                  <th class="text-center">GST</th>
+                  <th class="text-right">GST Amt</th>
+                  <th class="text-right">Total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="invoice-items-body">
+                <tr><td colspan="10" class="table-empty">Search products to start billing</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: Customer, Payment & Summary -->
+      <div style="grid-column: span 1;">
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Billing Details</h3></div>
+          
+          <div class="form-group">
+            <label for="invoice-type" class="fw-bold" style="color:var(--accent);">Bill Type</label>
+            <select id="invoice-type" class="form-control" onchange="onInvoiceTypeChange()">
+              <option value="gst" selected>GST Invoice (Taxable)</option>
+              <option value="estimate">Estimate / Quotation (Non-Tax)</option>
+            </select>
+          </div>
+
+          <div class="form-group autocomplete-wrapper" style="position:relative;">
+            <label for="customer-search">Customer Name</label>
+            <input type="text" id="customer-search" class="form-control" placeholder="Search customer (default Walk-in)" autocomplete="off">
+            <input type="hidden" id="customer-id" value="">
+            <div id="customer-dropdown" class="autocomplete-dropdown" style="display:none; position:absolute; width:100%; z-index:1000; background:#1e293b; border:1px solid rgba(148,163,184,0.1); max-height:200px; overflow-y:auto; border-radius:8px; margin-top:4px;"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="payment-method">Payment Method</label>
+            <select id="payment-method" class="form-control">
+              <option value="cash">Cash</option>
+              <option value="upi">UPI / GPay</option>
+              <option value="card">Card Payment</option>
+              <option value="credit">Credit / Account</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="payment-status">Payment Status</label>
+            <select id="payment-status" class="form-control">
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="invoice-notes">Notes / Remarks</label>
+            <textarea id="invoice-notes" class="form-control" rows="2" placeholder="Any extra notes..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="overall-discount">Overall Discount (₹)</label>
+            <input type="number" id="overall-discount" class="form-control" value="0" min="0" onchange="calculateTotals()">
+          </div>
+
+          <div class="summary-section" style="border-top:1px solid rgba(148,163,184,0.1); padding-top:16px; margin-top:16px;">
+            <div class="d-flex justify-between fs-sm text-secondary mb-1">
+              <span>Subtotal:</span>
+              <span id="subtotal-display">₹0.00</span>
+            </div>
+            <div class="d-flex justify-between fs-sm text-secondary mb-1">
+              <span>Total Tax:</span>
+              <span id="tax-display">₹0.00</span>
+            </div>
+            <div class="d-flex justify-between fs-sm text-secondary mb-1">
+              <span>Total Discount:</span>
+              <span id="discount-display">₹0.00</span>
+            </div>
+            <div class="d-flex justify-between fw-bold fs-2xl text-accent mt-3" style="border-top:2px solid var(--accent); padding-top:12px;">
+              <span>Total:</span>
+              <span id="grandtotal-display">₹0.00</span>
+            </div>
+          </div>
+
+          <button type="button" id="submit-invoice-btn" class="btn btn-primary btn-block mt-4" onclick="submitInvoice()">Create Invoice & Print</button>
+          <button type="button" class="btn btn-secondary btn-block mt-2" onclick="clearInvoice()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const CLONE_DATA = <%- cloneData ? JSON.stringify(cloneData) : 'null' %>;
+</script>
+<script src="/js/billing.js"></script>
+<%- include('../partials/footer') %>

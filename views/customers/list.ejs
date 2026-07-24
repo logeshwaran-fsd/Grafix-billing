@@ -1,0 +1,68 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'customers' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Customers' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="mb-3 d-flex justify-between align-center">
+      <form action="/customers" method="GET" class="form-inline flex-grow-1" style="max-width:400px;">
+        <input type="text" name="search" class="form-control" placeholder="Search name, phone, city..." value="<%= search %>">
+        <button type="submit" class="btn btn-primary">Search</button>
+        <% if (search) { %>
+          <a href="/customers" class="btn btn-secondary">Clear</a>
+        <% } %>
+      </form>
+      <a href="/customers/add" class="btn btn-primary">+ Add Customer</a>
+    </div>
+
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>City</th>
+              <th>State</th>
+              <th>GSTIN</th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (customers.length === 0) { %>
+              <tr><td colspan="7" class="table-empty">No customers found</td></tr>
+            <% } %>
+            <% customers.forEach(cust => { %>
+              <tr>
+                <td class="fw-bold"><%= cust.name %></td>
+                <td><%= cust.phone || '-' %></td>
+                <td><%= cust.email || '-' %></td>
+                <td><%= cust.city %></td>
+                <td><%= cust.state %></td>
+                <td><span class="badge badge-default"><%= cust.gstin || '-' %></span></td>
+                <td class="no-print">
+                  <div class="btn-group">
+                    <a href="/customers/edit/<%= cust.id %>" class="btn btn-secondary btn-sm">Edit</a>
+                    <form action="/customers/delete/<%= cust.id %>" method="POST" class="confirm-delete d-inline">
+                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <% if (pagination.totalPages > 1) { %>
+        <div class="pagination">
+          <% for(let i=1; i<=pagination.totalPages; i++) { %>
+            <a href="/customers?page=<%= i %>&search=<%= search %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

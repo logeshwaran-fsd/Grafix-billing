@@ -1,0 +1,140 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'tally' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Tally Ledgers & Accounts' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    
+    <!-- Top Action Cards -->
+    <div class="mb-4 d-flex justify-between align-center">
+      <div class="d-flex gap-2">
+        <button onclick="openPaymentModal()" class="btn btn-primary">📥 Log Payment Voucher</button>
+        <a href="/tally/export" class="btn btn-success">📤 Export to Tally (XML)</a>
+      </div>
+    </div>
+
+    <!-- Outstanding Statistics Cards -->
+    <div class="grid grid-3 mb-4">
+      <div class="card stat-card accent-purple">
+        <div class="stat-value">₹<%= totalOutstanding.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
+        <div class="stat-label">Total Outstanding Debit</div>
+      </div>
+      <div class="card stat-card accent-teal">
+        <div class="stat-value">₹<%= totalPaymentsReceived.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
+        <div class="stat-label">Total Credits (Payments Logged)</div>
+      </div>
+      <div class="card stat-card accent-blue">
+        <div class="stat-value"><%= ledgers.filter(l => l.balance > 0).length %></div>
+        <div class="stat-label">Active Outstanding Ledgers</div>
+      </div>
+    </div>
+
+    <!-- Ledgers Directory -->
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Customer Ledgers</h3></div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Customer Name</th>
+              <th>Phone</th>
+              <th class="text-right">Opening Balance</th>
+              <th class="text-right">Total Debit (Sales)</th>
+              <th class="text-right">Total Credit (Paid)</th>
+              <th class="text-right">Net Outstanding</th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (ledgers.length === 0) { %>
+              <tr><td colspan="7" class="table-empty">No customer accounts registered</td></tr>
+            <% } %>
+            <% ledgers.forEach(ledger => { %>
+              <tr>
+                <td class="fw-bold text-accent"><%= ledger.name %></td>
+                <td><%= ledger.phone || '-' %></td>
+                <td class="text-right text-muted">₹<%= ledger.opening_balance.toFixed(2) %></td>
+                <td class="text-right text-danger">₹<%= ledger.total_debit.toFixed(2) %></td>
+                <td class="text-right text-success">₹<%= ledger.total_credit.toFixed(2) %></td>
+                <td class="text-right fw-bold <%= ledger.balance > 0 ? 'text-warning' : (ledger.balance < 0 ? 'text-success' : '') %>">
+                  ₹<%= ledger.balance.toLocaleString('en-IN', {minimumFractionDigits: 2}) %>
+                </td>
+                <td class="no-print d-flex gap-1">
+                  <a href="/tally/ledger/<%= ledger.id %>" class="btn btn-secondary btn-sm">Statement</a>
+                  <button onclick="openPaymentModalForCustomer(<%= ledger.id %>, '<%= ledger.name.replace(/'/g, `\\'`) %>')" class="btn btn-primary btn-sm" style="padding:4px 8px; font-size:11px;">Receipt</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Receipt Voucher Modal Overlay -->
+<div id="payment-modal" class="modal-overlay no-print" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1050; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+  <div class="card" style="width: 100%; max-width: 500px; padding: 24px; border: 1px solid var(--border); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="font-weight: 700; color: #fff; margin: 0;">Log Payment Receipt</h3>
+      <button onclick="closePaymentModal()" style="background: none; border: none; font-size: 20px; color: var(--text-secondary); cursor: pointer;">✕</button>
+    </div>
+    <form action="/tally/payment" method="POST">
+      <div class="form-group">
+        <label for="payment-customer-id">Customer *</label>
+        <select name="customer_id" id="payment-customer-id" class="form-control" required style="background: var(--bg-input); border: 1px solid var(--border); color:#fff; border-radius:8px;">
+          <option value="">Select Customer</option>
+          <% customers.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label for="payment-amount">Amount (₹) *</label>
+          <input type="number" step="0.01" name="amount" id="payment-amount" class="form-control" required placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label for="payment-date">Voucher Date *</label>
+          <input type="date" name="payment_date" id="payment-date" class="form-control" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="payment-method">Payment Mode *</label>
+        <select name="payment_method" id="payment-method" class="form-control" required style="background: var(--bg-input); border: 1px solid var(--border); color:#fff; border-radius:8px;">
+          <option value="cash">Cash</option>
+          <option value="bank">Bank Transfer / UPI</option>
+          <option value="cheque">Cheque</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="payment-narration">Narration / Remarks</label>
+        <input type="text" name="narration" id="payment-narration" class="form-control" placeholder="e.g. Received part payment against invoices">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block mt-3">Post Receipt Voucher</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openPaymentModal() {
+    document.getElementById('payment-customer-id').value = '';
+    document.getElementById('payment-amount').value = '';
+    document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('payment-narration').value = '';
+    document.getElementById('payment-modal').style.display = 'flex';
+  }
+
+  function openPaymentModalForCustomer(custId, custName) {
+    openPaymentModal();
+    document.getElementById('payment-customer-id').value = custId;
+    document.getElementById('payment-narration').value = `Received from ${custName}`;
+  }
+
+  function closePaymentModal() {
+    document.getElementById('payment-modal').style.display = 'none';
+  }
+</script>
+
+<%- include('../partials/footer') %>

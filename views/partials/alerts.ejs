@@ -1,0 +1,12 @@
+<% if (typeof success !== 'undefined' && success) { %>
+  <div class="alert alert-success">
+    <span>✅ <%= success %></span>
+    <button class="alert-dismiss">✕</button>
+  </div>
+<% } %>
+<% if (typeof error !== 'undefined' && error) { %>
+  <div class="alert alert-danger">
+    <span>⚠️ <%= error %></span>
+    <button class="alert-dismiss">✕</button>
+  </div>
+<% } %>

@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'reports' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Stock Valuation Report' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="mb-3">
+      <a href="/reports" class="btn btn-secondary btn-sm">← Back to Reports</a>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:24px;">
+      <div class="card stat-card accent-teal">
+        <div class="stat-value"><%= totals.total_qty || 0 %></div>
+        <div class="stat-label">Total Qty in Stock</div>
+      </div>
+      <div class="card stat-card accent-blue">
+        <div class="stat-value">₹<%= (totals.total_cost || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
+        <div class="stat-label">Valuation (Cost Price)</div>
+      </div>
+      <div class="card stat-card accent-green">
+        <div class="stat-value">₹<%= (totals.total_sale || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
+        <div class="stat-label">Valuation (Retail Price)</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Product Name</th>
+              <th>Current Stock</th>
+              <th class="text-right">Cost Price</th>
+              <th class="text-right">Cost Value</th>
+              <th class="text-right">Retail Price</th>
+              <th class="text-right">Retail Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% products.forEach(prod => { %>
+              <tr>
+                <td><span class="badge badge-default"><%= prod.code %></span></td>
+                <td class="fw-bold"><%= prod.name %></td>
+                <td><%= prod.stock_quantity %></td>
+                <td class="text-right text-muted">₹<%= prod.cost_price.toFixed(2) %></td>
+                <td class="text-right">₹<%= prod.cost_value.toFixed(2) %></td>
+                <td class="text-right text-muted">₹<%= prod.unit_price.toFixed(2) %></td>
+                <td class="text-right fw-bold text-success">₹<%= prod.sale_value.toLocaleString('en-IN', {minimumFractionDigits:2}) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

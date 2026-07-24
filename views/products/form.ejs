@@ -1,0 +1,95 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'products' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: product ? 'Edit Product' : 'Add Product' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="card" style="max-width:800px;">
+      <form action="<%= product ? '/products/edit/' + product.id : '/products/add' %>" method="POST">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="code">Product Code / SKU *</label>
+            <input type="text" id="code" name="code" class="form-control" value="<%= product ? product.code : '' %>" required placeholder="e.g. 001">
+          </div>
+          <div class="form-group">
+            <label for="name">Product Name *</label>
+            <input type="text" id="name" name="name" class="form-control" value="<%= product ? product.name : '' %>" required placeholder="e.g. Polymer Plate">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="category_id">Category</label>
+            <select id="category_id" name="category_id" class="form-control">
+              <option value="">Select Category</option>
+              <% categories.forEach(cat => { %>
+                <option value="<%= cat.id %>" <%= (product && product.category_id == cat.id) ? 'selected' : '' %>><%= cat.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="unit">Unit of Measure</label>
+            <select id="unit" name="unit" class="form-control">
+              <% ['pcs', 'ltr', 'kg', 'roll', 'box', 'set'].forEach(u => { %>
+                <option value="<%= u %>" <%= (product && product.unit === u) ? 'selected' : '' %>><%= u %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="unit_price">Selling Price (₹) *</label>
+            <input type="number" id="unit_price" name="unit_price" class="form-control" step="0.01" value="<%= product ? product.unit_price : 0 %>" required>
+          </div>
+          <div class="form-group">
+            <label for="cost_price">Cost Price (₹) *</label>
+            <input type="number" id="cost_price" name="cost_price" class="form-control" step="0.01" value="<%= product ? product.cost_price : 0 %>" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <% if (!product) { %>
+              <label for="stock_quantity">Initial Stock Quantity *</label>
+              <input type="number" id="stock_quantity" name="stock_quantity" class="form-control" value="0" required>
+            <% } else { %>
+              <label>Current Stock (Update via Stock Adjustment)</label>
+              <input type="text" class="form-control" value="<%= product.stock_quantity %>" disabled>
+            <% } %>
+          </div>
+          <div class="form-group">
+            <label for="reorder_level">Reorder (Low Stock) Level</label>
+            <input type="number" id="reorder_level" name="reorder_level" class="form-control" value="<%= product ? product.reorder_level : 10 %>">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="hsn_code">HSN Code</label>
+            <input type="text" id="hsn_code" name="hsn_code" class="form-control" value="<%= product ? product.hsn_code : '' %>">
+          </div>
+          <div class="form-group">
+            <label for="gst_rate">GST Rate (%)</label>
+            <select id="gst_rate" name="gst_rate" class="form-control">
+              <% [0, 5, 12, 18, 28].forEach(r => { %>
+                <option value="<%= r %>" <%= (product && product.gst_rate == r) ? 'selected' : (r == 18 ? 'selected' : '') %>><%= r %>%</option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" class="form-control" rows="3"><%= product ? product.description : '' %></textarea>
+        </div>
+
+        <div class="btn-group mt-3">
+          <button type="submit" class="btn btn-primary">Save Product</button>
+          <a href="/products" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>
