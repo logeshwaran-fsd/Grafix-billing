@@ -505,7 +505,7 @@ async function submitInvoice() {
     });
     const result = await res.json();
     if (result.success) {
-      window.location.href = '/billing/' + (isEditing ? EDIT_INVOICE_ID : result.invoiceId) + '/pos';
+      window.location.href = '/billing/' + (isEditing ? EDIT_INVOICE_ID : result.invoiceId);
     } else {
       alert(result.error || (isEditing ? 'Failed to update invoice' : 'Failed to create invoice'));
       btn.disabled = false;
