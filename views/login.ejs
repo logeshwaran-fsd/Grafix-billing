@@ -9,7 +9,15 @@
 </head>
 <body class="login-page">
   <div class="login-card">
-    <img src="/images/logo.png" alt="Grafix Impression" style="max-height: 50px; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(20, 184, 166, 0.2));">
+    <svg width="0" height="0" style="position:absolute;">
+      <filter id="remove-black" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="1 0 0 0 0
+                                             0 1 0 0 0
+                                             0 0 1 0 0
+                                             1.5 1.5 1.5 0 -0.1" />
+      </filter>
+    </svg>
+    <img src="/images/logo.png" alt="Grafix Impression" style="max-height: 50px; margin-bottom: 20px; filter: url(#remove-black) drop-shadow(0 0 10px rgba(20, 184, 166, 0.2));">
     <h2 class="login-title">Grafix Impression</h2>
     <p class="login-subtitle">Billing & Inventory System</p>
     
