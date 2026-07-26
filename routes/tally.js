@@ -163,7 +163,7 @@ router.get('/export/xml', (req, res) => {
       <REQUESTDESC>
         <REPORTNAME>Vouchers</REPORTNAME>
         <STATICVARIABLES>
-          <SVCURRENTCOMPANY>Aimtech Solutions</SVCURRENTCOMPANY>
+          <SVCURRENTCOMPANY>Grafix Impression</SVCURRENTCOMPANY>
         </STATICVARIABLES>
       </REQUESTDESC>
       <REQUESTDATA>\n`;
