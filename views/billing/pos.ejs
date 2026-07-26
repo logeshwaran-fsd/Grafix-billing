@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Receipt - <%= invoice.invoice_number %></title>
+  <style>
+    body {
+      font-family: 'Courier New', Courier, monospace; /* Monospace is best for POS */
+      font-size: 12px;
+      margin: 0;
+      padding: 0;
+      color: #000;
+      background: #fff;
+    }
+    .ticket {
+      width: 80mm; /* Standard 3-inch POS printer width */
+      max-width: 80mm;
+      padding: 5mm;
+      margin: 0 auto;
+    }
+    .centered {
+      text-align: center;
+      align-content: center;
+    }
+    img {
+      max-width: inherit;
+      width: inherit;
+    }
+    h1, h2, h3, h4, h5, h6, p {
+      margin: 2px 0;
+    }
+    .company-name {
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .divider {
+      border-bottom: 1px dashed #000;
+      margin: 5px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 2px 0;
+      font-size: 11px;
+    }
+    th {
+      text-align: left;
+      border-bottom: 1px dashed #000;
+      border-top: 1px dashed #000;
+    }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .bold { font-weight: bold; }
+    
+    @media print {
+      .no-print, .no-print * {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .ticket {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body onload="window.print()">
+  <div class="ticket">
+    <div class="no-print" style="margin-bottom: 15px; text-align:center;">
+      <button onclick="window.print()" style="padding:8px 16px; font-weight:bold; cursor:pointer;">Print Receipt</button>
+      <a href="/billing" style="padding:8px 16px; margin-left:10px; color:#000;">Back</a>
+    </div>
+
+    <div class="centered">
+      <div class="company-name"><%= settings.company_name || 'Grafix Impression' %></div>
+      <p><%= settings.company_address || 'Chennai' %></p>
+      <p>Ph: <%= settings.company_phone || '-' %></p>
+      <% if (invoice.invoice_type !== 'estimate' && settings.company_gstin) { %>
+        <p>GSTIN: <%= settings.company_gstin %></p>
+      <% } %>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <p>Receipt #: <%= invoice.invoice_number %></p>
+    <p>Date: <%= new Date(invoice.created_at).toLocaleDateString('en-IN') %></p>
+    <p>Customer: <%= invoice.customer_name || 'Walk-in' %></p>
+    
+    <div class="divider"></div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 40%;">Item</th>
+          <th style="width: 20%;" class="text-center">Qty</th>
+          <th style="width: 40%;" class="text-right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach((item) => { %>
+          <tr>
+            <td colspan="3" style="padding-top: 4px;"><%= item.product_name %></td>
+          </tr>
+          <tr>
+            <td><%= item.quantity %> x <%= item.unit_price.toFixed(2) %></td>
+            <% if (item.discount > 0) { %>
+              <td class="text-center">(-<%= item.discount %>)</td>
+            <% } else { %>
+              <td></td>
+            <% } %>
+            <td class="text-right"><%= item.total.toFixed(2) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    
+    <div class="divider"></div>
+    
+    <table>
+      <tbody>
+        <tr>
+          <td>Subtotal:</td>
+          <td class="text-right"><%= invoice.subtotal.toFixed(2) %></td>
+        </tr>
+        <% if (invoice.discount_amount > 0) { %>
+          <tr>
+            <td>Discount:</td>
+            <td class="text-right">-<%= invoice.discount_amount.toFixed(2) %></td>
+          </tr>
+        <% } %>
+        <% if (invoice.invoice_type !== 'estimate') { %>
+          <tr>
+            <td>Tax (GST):</td>
+            <td class="text-right"><%= invoice.tax_amount.toFixed(2) %></td>
+          </tr>
+        <% } %>
+        <tr class="bold" style="font-size: 14px;">
+          <td style="padding-top: 5px;">GRAND TOTAL:</td>
+          <td class="text-right" style="padding-top: 5px;"><%= invoice.total_amount.toFixed(2) %></td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="divider"></div>
+    
+    <p>Paid by: <%= invoice.payment_method %></p>
+    
+    <div class="centered" style="margin-top: 15px; margin-bottom: 25px;">
+      <p>Thank you for your business!</p>
+      <p>Visit Again</p>
+    </div>
+  </div>
+</body>
+</html>

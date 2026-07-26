@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 
@@ -36,7 +36,7 @@ router.get('/api/search', (req, res) => {
       FROM customers 
       WHERE name LIKE ? OR phone LIKE ? 
       LIMIT 10
-    `).all(`%${q}%`, `%${q}%`);
+    `).all(`${q}%`, `${q}%`);
     res.json(customers);
   } catch (err) {
     res.status(500).json([]);
@@ -57,8 +57,22 @@ router.post('/add', (req, res) => {
     req.session.success = 'Customer added successfully!';
     res.redirect('/customers');
   } catch (err) {
-    req.session.error = 'Failed to add customer';
     res.redirect('/customers/add');
+  }
+});
+
+router.post('/api/quick-add', (req, res) => {
+  const { name, phone, city } = req.body;
+  if (!name) return res.status(400).json({ success: false, error: 'Name is required' });
+  try {
+    const db = getDb();
+    const result = db.prepare(`
+      INSERT INTO customers (name, phone, city, state) 
+      VALUES (?, ?, ?, 'Tamil Nadu')
+    `).run(name, phone || '', city || 'Chennai');
+    res.json({ success: true, customer: { id: result.lastInsertRowid, name, phone, city } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to add customer' });
   }
 });
 

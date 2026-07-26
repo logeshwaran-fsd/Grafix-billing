@@ -9,6 +9,43 @@ function debounce(func, wait) {
   };
 }
 
+function handleDropdownNav(e, dropdown, emptyCallback) {
+  if (dropdown.style.display === 'none') {
+    if (e.key === 'Enter' && emptyCallback) {
+      e.preventDefault();
+      emptyCallback();
+    }
+    return;
+  }
+
+  const items = Array.from(dropdown.querySelectorAll('.dropdown-item'));
+  if (items.length === 0) return;
+
+  let currentIndex = items.findIndex(item => item.classList.contains('active'));
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (currentIndex > -1) items[currentIndex].classList.remove('active');
+    currentIndex = (currentIndex + 1) % items.length;
+    items[currentIndex].classList.add('active');
+    items[currentIndex].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (currentIndex > -1) items[currentIndex].classList.remove('active');
+    currentIndex = currentIndex - 1 < 0 ? items.length - 1 : currentIndex - 1;
+    items[currentIndex].classList.add('active');
+    items[currentIndex].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (currentIndex > -1) {
+      items[currentIndex].click();
+    } else {
+      items[0].click();
+    }
+  }
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
   const prodSearch = document.getElementById('product-search');
   const prodDropdown = document.getElementById('product-dropdown');
@@ -37,6 +74,24 @@ document.addEventListener('DOMContentLoaded', () => {
         prodDropdown.style.display = 'block';
       }
     }, 250));
+
+    prodSearch.addEventListener('keydown', (e) => {
+      if (['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+        handleDropdownNav(e, prodDropdown, () => {
+          if (prodSearch.value.trim() !== '') {
+            // Open quick add product modal
+            document.getElementById('quick-prod-name').value = prodSearch.value.trim();
+            document.getElementById('quick-prod-code').value = '';
+            document.getElementById('quick-prod-price').value = '0.00';
+            document.getElementById('quick-prod-qty').value = '0';
+            document.getElementById('quick-product-modal').style.display = 'flex';
+            document.getElementById('quick-prod-code').focus();
+          } else {
+            document.getElementById('customer-search').focus();
+          }
+        });
+      }
+    });
   }
 
   const custSearch = document.getElementById('customer-search');
@@ -65,6 +120,23 @@ document.addEventListener('DOMContentLoaded', () => {
         custDropdown.style.display = 'none';
       }
     }, 250));
+
+    custSearch.addEventListener('keydown', (e) => {
+      if (['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+        handleDropdownNav(e, custDropdown, () => {
+          if (custSearch.value.trim() !== '') {
+            // Open quick add customer modal
+            document.getElementById('quick-cust-name').value = custSearch.value.trim();
+            document.getElementById('quick-cust-phone').value = '';
+            document.getElementById('quick-cust-city').value = 'Chennai';
+            document.getElementById('quick-customer-modal').style.display = 'flex';
+            document.getElementById('quick-cust-phone').focus();
+          } else {
+            document.getElementById('payment-method').focus();
+          }
+        });
+      }
+    });
   }
 
   // Close dropdowns
@@ -89,17 +161,59 @@ document.addEventListener('DOMContentLoaded', () => {
     invoiceItems = CLONE_DATA.items;
     renderItems();
   }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (document.activeElement.id === 'payment-method') {
+        e.preventDefault();
+        document.getElementById('payment-status').focus();
+      } else if (document.activeElement.id === 'payment-status') {
+        e.preventDefault();
+        document.getElementById('invoice-notes').focus();
+      } else if (document.activeElement.id === 'invoice-notes') {
+        e.preventDefault();
+        document.getElementById('submit-invoice-btn').focus();
+      }
+    }
+  });
 });
 
 function selectCustomer(id, name) {
   document.getElementById('customer-id').value = id;
   document.getElementById('customer-search').value = name;
   document.getElementById('customer-dropdown').style.display = 'none';
+  document.getElementById('payment-method').focus();
 }
 
-function addItem(p) {
+let pendingProductToAdd = null;
+
+async function addItem(p) {
   document.getElementById('product-search').value = '';
   document.getElementById('product-dropdown').style.display = 'none';
+
+  if (p.stock_quantity <= 0) {
+    pendingProductToAdd = p;
+    document.getElementById('quick-stock-product-name').textContent = p.name;
+    document.getElementById('quick-stock-product-id').value = p.id;
+    document.getElementById('quick-stock-qty').value = 1;
+    document.getElementById('quick-stock-modal').style.display = 'flex';
+    document.getElementById('quick-stock-qty').focus();
+    return;
+  }
+
+  try {
+    const res = await fetch(`/products/api/history/${p.id}`);
+    const history = await res.json();
+    const histDiv = document.getElementById('product-history');
+    if (history && history.length > 0) {
+      const last = history[0];
+      const dateStr = new Date(last.invoice_date).toLocaleDateString('en-IN');
+      histDiv.innerHTML = `Last bought by <strong>${last.customer_name || 'Walk-in'}</strong> on ${dateStr} (Qty: ${last.quantity} @ ₹${last.unit_price})`;
+      histDiv.style.display = 'block';
+    } else {
+      histDiv.style.display = 'none';
+    }
+  } catch(e) {}
 
   const invoiceType = document.getElementById('invoice-type').value;
   const isEstimate = (invoiceType === 'estimate');
@@ -118,6 +232,7 @@ function addItem(p) {
       name: p.name,
       quantity: 1,
       unit_price: p.unit_price,
+      original_unit_price: p.unit_price,
       discount: 0,
       original_tax_rate: p.gst_rate || 18,
       tax_rate: isEstimate ? 0 : (p.gst_rate || 18),
@@ -125,6 +240,14 @@ function addItem(p) {
     });
   }
   renderItems();
+
+  setTimeout(() => {
+    const qtyInputs = document.querySelectorAll('.qty-input');
+    if (qtyInputs.length > 0) {
+      qtyInputs[qtyInputs.length - 1].focus();
+      qtyInputs[qtyInputs.length - 1].select();
+    }
+  }, 50);
 }
 
 function onInvoiceTypeChange() {
@@ -157,11 +280,17 @@ function renderItems() {
         <td><span class="badge badge-default">${item.code}</span></td>
         <td class="fw-bold">${item.name}</td>
         <td>
-          <input type="number" class="form-control" style="width: 70px; padding: 6px;" value="${item.quantity}" min="1" max="${item.stock_quantity}" onchange="updateQty(${index}, this.value)">
+          <input type="number" class="form-control qty-input" style="width: 70px; padding: 6px;" value="${item.quantity}" min="1" max="${item.stock_quantity}" onchange="updateQty(${index}, this.value)" onkeydown="handleGridNav(event, 'qty', ${index})">
         </td>
-        <td class="text-right">₹${item.unit_price.toFixed(2)}</td>
         <td>
-          <input type="number" class="form-control" style="width: 80px; padding: 6px;" value="${item.discount}" min="0" onchange="updateDiscount(${index}, this.value)">
+          <div style="position:relative; display:flex; align-items:center;">
+            <span style="position:absolute; left:8px; color:var(--text-secondary)">₹</span>
+            <input type="number" class="form-control price-input" style="width: 90px; padding: 6px 6px 6px 20px;" value="${item.unit_price}" step="0.01" min="0" onchange="updatePrice(${index}, this.value)" onkeydown="handleGridNav(event, 'price', ${index})">
+            ${item.unit_price !== item.original_unit_price ? `<button type="button" class="btn btn-sm" style="padding:2px 5px; margin-left:4px; background:none; color:var(--accent); border:none; cursor:pointer;" onclick="resetPrice(${index})" title="Reset to Original Price (₹${item.original_unit_price})">↺</button>` : ''}
+          </div>
+        </td>
+        <td>
+          <input type="number" class="form-control discount-input" style="width: 80px; padding: 6px;" value="${item.discount}" min="0" onchange="updateDiscount(${index}, this.value)" onkeydown="handleGridNav(event, 'discount', ${index})">
         </td>
         <td class="text-center">${item.tax_rate}%</td>
         <td class="text-right text-muted">₹${gstAmt.toFixed(2)}</td>
@@ -176,20 +305,50 @@ function renderItems() {
   calculateTotals();
 }
 
-function updateQty(index, val) {
-  const qty = parseInt(val) || 1;
-  const item = invoiceItems[index];
-  if (qty > item.stock_quantity) {
-    alert('Cannot exceed stock quantity!');
-    item.quantity = item.stock_quantity;
-  } else {
-    item.quantity = qty;
+function handleGridNav(e, type, index) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (type === 'qty') {
+      const discounts = document.querySelectorAll('.discount-input');
+      if (discounts[index]) {
+        discounts[index].focus();
+        discounts[index].select();
+      }
+    } else if (type === 'discount') {
+      document.getElementById('product-search').focus();
+    }
   }
+}
+
+function updateQty(index, value) {
+  const qty = parseInt(value);
+  if (qty > 0 && qty <= invoiceItems[index].stock_quantity) {
+    invoiceItems[index].quantity = qty;
+    renderItems();
+  } else {
+    alert('Invalid quantity or out of stock!');
+    renderItems();
+  }
+}
+
+function updatePrice(index, value) {
+  const price = parseFloat(value);
+  if (price >= 0) {
+    invoiceItems[index].unit_price = price;
+    renderItems();
+  } else {
+    alert('Invalid price!');
+    renderItems();
+  }
+}
+
+function resetPrice(index) {
+  invoiceItems[index].unit_price = invoiceItems[index].original_unit_price;
   renderItems();
 }
 
-function updateDiscount(index, val) {
-  invoiceItems[index].discount = parseFloat(val) || 0;
+function updateDiscount(index, value) {
+  invoiceItems[index].discount = parseFloat(value) || 0;
   renderItems();
 }
 
@@ -246,7 +405,7 @@ async function submitInvoice() {
     });
     const result = await res.json();
     if (result.success) {
-      window.location.href = '/billing/' + result.invoiceId;
+      window.location.href = '/billing/' + result.invoiceId + '/pos';
     } else {
       alert(result.error || 'Failed to create invoice');
       btn.disabled = false;
@@ -256,5 +415,125 @@ async function submitInvoice() {
     alert('Error creating invoice');
     btn.disabled = false;
     btn.textContent = 'Create Invoice & Print';
+  }
+}
+
+function closeQuickStockModal() {
+  document.getElementById('quick-stock-modal').style.display = 'none';
+  pendingProductToAdd = null;
+  document.getElementById('product-search').focus();
+}
+
+async function submitQuickStock() {
+  const qtyInput = document.getElementById('quick-stock-qty');
+  const qty = parseInt(qtyInput.value);
+  if (!qty || qty <= 0) return alert('Invalid quantity');
+  
+  try {
+    const res = await fetch(`/inventory/api/adjust/${pendingProductToAdd.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'purchase',
+        quantity: qty,
+        notes: 'Quick adjust during billing'
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      pendingProductToAdd.stock_quantity = result.newStock;
+      const p = pendingProductToAdd;
+      closeQuickStockModal();
+      addItem(p);
+    } else {
+      alert(result.error || 'Failed to update stock');
+    }
+  } catch(err) {
+    alert('Error updating stock');
+  }
+}
+
+function openQuickCustModal() {
+  document.getElementById('quick-cust-name').value = document.getElementById('customer-search').value.trim();
+  document.getElementById('quick-cust-phone').value = '';
+  document.getElementById('quick-cust-city').value = 'Chennai';
+  document.getElementById('quick-customer-modal').style.display = 'flex';
+  document.getElementById('quick-cust-phone').focus();
+}
+
+function closeQuickCustModal() {
+  document.getElementById('quick-customer-modal').style.display = 'none';
+  document.getElementById('customer-search').focus();
+}
+
+async function submitQuickCust() {
+  const name = document.getElementById('quick-cust-name').value.trim();
+  const phone = document.getElementById('quick-cust-phone').value.trim();
+  const city = document.getElementById('quick-cust-city').value.trim();
+  
+  if (!name) return alert('Customer Name is required!');
+  
+  try {
+    const res = await fetch('/customers/api/quick-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, city })
+    });
+    const result = await res.json();
+    if (result.success) {
+      closeQuickCustModal();
+      selectCustomer(result.customer.id, result.customer.name);
+    } else {
+      alert(result.error || 'Failed to add customer');
+    }
+  } catch(err) {
+    alert('Error saving customer');
+  }
+}
+
+function openQuickProdModal() {
+  document.getElementById('quick-prod-name').value = document.getElementById('product-search').value.trim();
+  document.getElementById('quick-prod-code').value = '';
+  document.getElementById('quick-prod-price').value = '0.00';
+  document.getElementById('quick-prod-qty').value = '0';
+  document.getElementById('quick-product-modal').style.display = 'flex';
+  document.getElementById('quick-prod-code').focus();
+}
+
+function closeQuickProdModal() {
+  document.getElementById('quick-product-modal').style.display = 'none';
+  document.getElementById('product-search').focus();
+}
+
+async function submitQuickProd() {
+  const code = document.getElementById('quick-prod-code').value.trim();
+  const name = document.getElementById('quick-prod-name').value.trim();
+  const price = document.getElementById('quick-prod-price').value;
+  const qty = document.getElementById('quick-prod-qty').value;
+  const gst = document.getElementById('quick-prod-gst').value;
+  
+  if (!code || !name) return alert('Code and Name are required!');
+  
+  try {
+    const res = await fetch('/products/api/quick-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code, name,
+        unit_price: parseFloat(price) || 0,
+        cost_price: parseFloat(price) || 0,
+        stock_quantity: parseInt(qty) || 0,
+        gst_rate: parseFloat(gst) || 18
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      closeQuickProdModal();
+      addItem(result.product);
+    } else {
+      alert(result.error || 'Failed to add product');
+    }
+  } catch(err) {
+    alert('Error saving product');
   }
 }

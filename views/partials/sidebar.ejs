@@ -15,6 +15,9 @@
     <a href="/customers" class="sidebar-link <%= activePage === 'customers' ? 'active' : '' %>">
       <span class="icon">👥</span> Customers
     </a>
+    <a href="/credit" class="sidebar-link <%= activePage === 'credit' ? 'active' : '' %>">
+      <span class="icon">💰</span> Credit / Dues
+    </a>
     <a href="/billing/new" class="sidebar-link <%= activePage === 'billing-new' ? 'active' : '' %>">
       <span class="icon">🧾</span> New Invoice
     </a>
@@ -24,17 +27,17 @@
     <a href="/inventory" class="sidebar-link <%= activePage === 'inventory' ? 'active' : '' %>">
       <span class="icon">📈</span> Stock
     </a>
-    <a href="/reports" class="sidebar-link <%= activePage === 'reports' ? 'active' : '' %>">
-      <span class="icon">📈</span> Reports
-    </a>
-    <a href="/tally/ledger" class="sidebar-link <%= activePage === 'tally' ? 'active' : '' %>">
-      <span class="icon">📔</span> Tally Ledger
-    </a>
-    <a href="/data" class="sidebar-link <%= activePage === 'data' ? 'active' : '' %>">
-      <span class="icon">💾</span> Import/Export
-    </a>
-    <div class="sidebar-divider"></div>
     <% if (user && user.role === 'admin') { %>
+      <a href="/reports" class="sidebar-link <%= activePage === 'reports' ? 'active' : '' %>">
+        <span class="icon">📈</span> Reports
+      </a>
+      <a href="/tally/ledger" class="sidebar-link <%= activePage === 'tally' ? 'active' : '' %>">
+        <span class="icon">📔</span> Tally Ledger
+      </a>
+      <a href="/data" class="sidebar-link <%= activePage === 'data' ? 'active' : '' %>">
+        <span class="icon">💾</span> Import/Export
+      </a>
+      <div class="sidebar-divider"></div>
       <a href="/users" class="sidebar-link <%= activePage === 'users' ? 'active' : '' %>">
         <span class="icon">👤</span> Users
       </a>

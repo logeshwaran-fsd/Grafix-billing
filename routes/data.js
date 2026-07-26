@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
@@ -10,6 +10,12 @@ const upload = multer({ dest: 'uploads/' });
 
 router.get('/', (req, res) => {
   res.render('data/manage', { pageTitle: 'Data Management', activePage: 'data' });
+});
+
+router.get('/backup', (req, res) => {
+  const dbPath = path.join(__dirname, '../database/inventory.db');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  res.download(dbPath, `inventory_backup_${timestamp}.db`);
 });
 
 router.get('/export/products', (req, res) => {

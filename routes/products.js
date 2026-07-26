@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 
@@ -57,8 +57,27 @@ router.get('/api/search', (req, res) => {
       FROM products 
       WHERE (name LIKE ? OR code LIKE ?) AND is_active = 1
       LIMIT 10
-    `).all(`%${q}%`, `%${q}%`);
+    `).all(`${q}%`, `${q}%`);
     res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/api/history/:id', (req, res) => {
+  try {
+    const db = getDb();
+    // Get the last 10 purchases of this product, showing customer and date
+    const history = db.prepare(`
+      SELECT c.name as customer_name, i.date as invoice_date, ii.quantity, ii.unit_price
+      FROM invoice_items ii
+      JOIN invoices i ON ii.invoice_id = i.id
+      LEFT JOIN customers c ON i.customer_id = c.id
+      WHERE ii.product_id = ?
+      ORDER BY i.date DESC
+      LIMIT 10
+    `).all(req.params.id);
+    res.json(history);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -87,6 +106,21 @@ router.post('/add', (req, res) => {
     console.error(err);
     req.session.error = 'Failed to add product: Code must be unique';
     res.redirect('/products/add');
+  }
+});
+
+router.post('/api/quick-add', (req, res) => {
+  const { code, name, unit_price, cost_price, stock_quantity, gst_rate } = req.body;
+  if (!code || !name) return res.status(400).json({ success: false, error: 'Code and Name are required' });
+  try {
+    const db = getDb();
+    const result = db.prepare(`
+      INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, reorder_level, unit, gst_rate, is_active) 
+      VALUES (?, ?, ?, ?, ?, 10, 'pcs', ?, 1)
+    `).run(code, name, unit_price || 0, cost_price || 0, stock_quantity || 0, gst_rate || 18);
+    res.json({ success: true, product: { id: result.lastInsertRowid, code, name, unit_price: unit_price || 0, stock_quantity: stock_quantity || 0, gst_rate: gst_rate || 18 } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to add product (code might not be unique)' });
   }
 });
 

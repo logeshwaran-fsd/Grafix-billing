@@ -1,4 +1,4 @@
-﻿PRAGMA journal_mode = WAL;
+PRAGMA journal_mode = WAL;
 PRAGMA busy_timeout = 5000;
 PRAGMA foreign_keys = ON;
 
@@ -97,6 +97,17 @@ CREATE TABLE IF NOT EXISTS stock_transactions (
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS customer_payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL REFERENCES customers(id),
+  amount REAL NOT NULL,
+  payment_method TEXT DEFAULT 'cash',
+  reference_number TEXT,
+  notes TEXT,
+  user_id INTEGER REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_code ON products(code);

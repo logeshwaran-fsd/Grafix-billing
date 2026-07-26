@@ -2,12 +2,32 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
 const { initialize } = require('./database/db');
-const { isAuthenticated, attachLocals } = require('./middleware/auth');
+const { isAuthenticated, isAdmin, attachLocals } = require('./middleware/auth');
 
 const app = express();
 
 initialize();
+
+// Automatic Daily Backup (runs every 24 hours)
+const BACKUP_DIR = path.join(__dirname, 'backups');
+if (!fs.existsSync(BACKUP_DIR)) {
+  fs.mkdirSync(BACKUP_DIR);
+}
+setInterval(() => {
+  try {
+    const dbPath = path.join(__dirname, 'database', 'inventory.db');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = path.join(BACKUP_DIR, `inventory_backup_${timestamp}.db`);
+    if (fs.existsSync(dbPath)) {
+      fs.copyFileSync(dbPath, backupPath);
+      console.log(`[Backup] Automated backup created at ${backupPath}`);
+    }
+  } catch (err) {
+    console.error('[Backup Error]', err);
+  }
+}, 24 * 60 * 60 * 1000); // 24 hours
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -33,11 +53,12 @@ app.use('/categories', require('./routes/categories'));
 app.use('/customers', require('./routes/customers'));
 app.use('/billing', require('./routes/billing'));
 app.use('/inventory', require('./routes/inventory'));
-app.use('/reports', require('./routes/reports'));
-app.use('/users', require('./routes/users'));
-app.use('/data', require('./routes/data'));
-app.use('/settings', require('./routes/settings'));
-app.use('/tally', require('./routes/tally'));
+app.use('/reports', isAdmin, require('./routes/reports'));
+app.use('/users', isAdmin, require('./routes/users'));
+app.use('/data', isAdmin, require('./routes/data'));
+app.use('/settings', isAdmin, require('./routes/settings'));
+app.use('/tally', isAdmin, require('./routes/tally'));
+app.use('/credit', require('./routes/credit'));
 
 app.get('/', (req, res) => res.redirect('/dashboard'));
 

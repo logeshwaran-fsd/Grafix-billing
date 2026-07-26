@@ -1,0 +1,138 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'credit' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Customer Credit & Payments' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    
+    <div class="grid grid-3 mb-4">
+      <div class="card" style="background: linear-gradient(135deg, #ef4444, #b91c1c); color: white;">
+        <h3 style="margin: 0; font-size: 14px; opacity: 0.9; text-transform: uppercase;">Total Outstanding Debt</h3>
+        <h2 style="margin: 10px 0 0; font-size: 32px;">₹<%= totalOutstanding.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></h2>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <!-- Left side: Outstanding Customers -->
+      <div class="card">
+        <h3 class="card-title">Customers with Outstanding Dues</h3>
+        <div class="table-container mt-3">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Phone</th>
+                <th class="text-right">Pending Balance (₹)</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (customers.length === 0) { %>
+                <tr><td colspan="4" class="table-empty">All customers are clear!</td></tr>
+              <% } %>
+              <% customers.forEach(c => { %>
+                <tr>
+                  <td class="fw-bold"><%= c.name %></td>
+                  <td><%= c.phone || '-' %></td>
+                  <td class="text-right fw-bold" style="color: <%= c.balance > 0 ? '#ef4444' : '#10b981' %>">
+                    <%= c.balance.toFixed(2) %>
+                  </td>
+                  <td class="text-center">
+                    <a href="/credit/<%= c.id %>" class="btn btn-secondary btn-sm">Statement</a>
+                    <% if (c.balance > 0) { %>
+                      <button onclick="openPaymentModal(<%= c.id %>, '<%= c.name.replace(/'/g, "\\'") %>', <%= c.balance %>)" class="btn btn-success btn-sm">Receive</button>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Right side: Recent Payments -->
+      <div class="card">
+        <h3 class="card-title">Recent Payments Received</h3>
+        <div class="table-container mt-3">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Customer</th>
+                <th class="text-right">Amount (₹)</th>
+                <th>Method</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (recentPayments.length === 0) { %>
+                <tr><td colspan="4" class="table-empty">No recent payments</td></tr>
+              <% } %>
+              <% recentPayments.forEach(p => { %>
+                <tr>
+                  <td><%= new Date(p.payment_date).toLocaleDateString('en-IN') %></td>
+                  <td class="fw-bold"><%= p.customer_name %></td>
+                  <td class="text-right fw-bold text-success"><%= p.amount.toFixed(2) %></td>
+                  <td class="text-uppercase fs-sm"><%= p.payment_method %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div id="payment-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center;">
+  <div class="modal-content" style="background:#fff; padding:24px; border-radius:8px; width:100%; max-width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <h3 style="margin-top:0; color:#0f172a;" id="payment-modal-title">Receive Payment</h3>
+    <form action="/credit/receive" method="POST">
+      <input type="hidden" name="customer_id" id="modal-customer-id">
+      
+      <div class="form-group mt-3">
+        <label>Amount (₹)</label>
+        <input type="number" name="amount" id="modal-amount" class="form-control" step="0.01" required>
+      </div>
+      
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select name="payment_method" class="form-control">
+          <option value="cash">Cash</option>
+          <option value="upi">UPI / GPay</option>
+          <option value="bank">Bank Transfer</option>
+          <option value="cheque">Cheque</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" name="payment_date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+      </div>
+      
+      <div class="form-group">
+        <label>Notes (Optional)</label>
+        <input type="text" name="narration" class="form-control" placeholder="Transaction ID, Cheque No, etc.">
+      </div>
+      
+      <div class="d-flex justify-between mt-4">
+        <button type="button" class="btn btn-secondary" onclick="closePaymentModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Payment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openPaymentModal(id, name, balance) {
+    document.getElementById('modal-customer-id').value = id;
+    document.getElementById('modal-amount').value = balance;
+    document.getElementById('payment-modal-title').textContent = 'Receive from: ' + name;
+    document.getElementById('payment-modal').style.display = 'flex';
+  }
+  function closePaymentModal() {
+    document.getElementById('payment-modal').style.display = 'none';
+  }
+</script>
+
+<%- include('../partials/footer') %>

@@ -187,6 +187,10 @@ router.post('/create', (req, res) => {
       insertStockTxStmt.run(item.product_id, -item.quantity, invoiceId, req.session.user.id);
     }
 
+    if (customer_id && payment_status === 'pending') {
+      db.prepare('UPDATE customers SET balance = balance + ? WHERE id = ?').run(total_amount, customer_id);
+    }
+
     return invoiceId;
   });
 
@@ -211,7 +215,26 @@ router.get('/:id', (req, res) => {
     `).get(req.params.id);
     if (!invoice) return res.redirect('/billing');
     const items = db.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?').all(req.params.id);
-    res.render('billing/view', { pageTitle: 'Invoice Detail', activePage: 'billing', invoice, items });
+    const download = req.query.download === 'true';
+    res.render('billing/view', { pageTitle: 'Invoice Detail', activePage: 'billing', invoice, items, download });
+  } catch (err) {
+    res.redirect('/billing');
+  }
+});
+
+router.get('/:id/pos', (req, res) => {
+  try {
+    const db = getDb();
+    const invoice = db.prepare(`
+      SELECT i.*, c.name as customer_name, c.phone as customer_phone, u.full_name as billed_by
+      FROM invoices i
+      LEFT JOIN customers c ON i.customer_id = c.id
+      LEFT JOIN users u ON i.user_id = u.id
+      WHERE i.id = ?
+    `).get(req.params.id);
+    if (!invoice) return res.redirect('/billing');
+    const items = db.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?').all(req.params.id);
+    res.render('billing/pos', { pageTitle: 'POS Receipt', activePage: 'billing', invoice, items });
   } catch (err) {
     res.redirect('/billing');
   }
@@ -220,7 +243,7 @@ router.get('/:id', (req, res) => {
 router.post('/:id/cancel', (req, res) => {
   const db = getDb();
   const tx = db.transaction(() => {
-    const inv = db.prepare('SELECT id, payment_status FROM invoices WHERE id = ?').get(req.params.id);
+    const inv = db.prepare('SELECT id, payment_status, customer_id, total_amount FROM invoices WHERE id = ?').get(req.params.id);
     if (!inv || inv.payment_status === 'cancelled') return;
     
     const items = db.prepare('SELECT product_id, quantity FROM invoice_items WHERE invoice_id = ?').all(req.params.id);
@@ -237,6 +260,10 @@ router.post('/:id/cancel', (req, res) => {
     }
     
     db.prepare("UPDATE invoices SET payment_status = 'cancelled' WHERE id = ?").run(req.params.id);
+
+    if (inv.customer_id && inv.payment_status === 'pending') {
+      db.prepare('UPDATE customers SET balance = balance - ? WHERE id = ?').run(inv.total_amount, inv.customer_id);
+    }
   });
   
   try {

@@ -3,23 +3,24 @@
    ================================================== */
 
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-card: rgba(30, 41, 59, 0.7);
-  --bg-sidebar: #0c1222;
-  --bg-input: #1e293b;
-  --bg-table-stripe: rgba(148, 163, 184, 0.03);
-  --bg-table-hover: rgba(20, 184, 166, 0.06);
+  /* Pearl White Theme */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e2e8f0;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-sidebar: #ffffff;
+  --bg-input: #ffffff;
+  --bg-table-stripe: rgba(15, 23, 42, 0.02);
+  --bg-table-hover: rgba(37, 99, 235, 0.05);
 
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
   --text-muted: #64748b;
   
-  --accent: #14b8a6;
-  --accent-hover: #0d9488;
-  --accent-glow: rgba(20, 184, 166, 0.2);
-  --accent-gradient: linear-gradient(135deg, #14b8a6, #0d9488);
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-glow: rgba(37, 99, 235, 0.2);
+  --accent-gradient: linear-gradient(135deg, #3b82f6, #1d4ed8);
   
   --success: #10b981;
   --success-bg: rgba(16, 185, 129, 0.1);
@@ -32,10 +33,10 @@
   --purple: #8b5cf6;
   --purple-bg: rgba(139, 92, 246, 0.1);
 
-  --border: rgba(148, 163, 184, 0.1);
-  --border-light: rgba(148, 163, 184, 0.15);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --border: rgba(15, 23, 42, 0.1);
+  --border-light: rgba(15, 23, 42, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
 
   --sidebar-width: 260px;
   --header-height: 65px;

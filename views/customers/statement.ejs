@@ -1,0 +1,73 @@
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'credit' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Customer Statement' }) %>
+  <%- include('../partials/alerts') %>
+  
+  <div class="content-area">
+    <div class="mb-3 d-flex gap-2 no-print">
+      <a href="/credit" class="btn btn-secondary">← Back to Credit Mgt</a>
+      <button onclick="window.print()" class="btn btn-primary">Print Statement 🖨️</button>
+    </div>
+
+    <div class="card" style="max-width: 850px; margin: 0 auto; padding: 40px; background: #fff;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h2><%= settings.company_name || 'Grafix Impression' %></h2>
+        <h3>Statement of Account</h3>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <div>
+          <strong>To:</strong><br>
+          <span style="font-size: 18px; font-weight: bold;"><%= customer.name %></span><br>
+          Phone: <%= customer.phone || '-' %><br>
+          <% if (customer.address) { %><%= customer.address %><% } %>
+        </div>
+        <div style="text-align: right;">
+          <strong>Date:</strong> <%= new Date().toLocaleDateString('en-IN') %><br>
+          <strong>Total Outstanding:</strong> 
+          <span style="font-size: 20px; font-weight: bold; color: <%= customer.balance > 0 ? '#ef4444' : '#10b981' %>;">
+            ₹<%= customer.balance.toFixed(2) %>
+          </span>
+        </div>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <thead>
+          <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+            <th style="padding: 10px; text-align: left;">Date</th>
+            <th style="padding: 10px; text-align: left;">Ref #</th>
+            <th style="padding: 10px; text-align: left;">Type</th>
+            <th style="padding: 10px; text-align: right;">Debit (Bills)</th>
+            <th style="padding: 10px; text-align: right;">Credit (Paid)</th>
+            <th style="padding: 10px; text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (ledger.length === 0) { %>
+            <tr><td colspan="6" class="table-empty">No transactions found</td></tr>
+          <% } %>
+          <% ledger.forEach(tx => { %>
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+              <td style="padding: 10px;"><%= new Date(tx.date).toLocaleDateString('en-IN') %></td>
+              <td style="padding: 10px; font-weight: 500;"><%= tx.ref || '-' %></td>
+              <td style="padding: 10px;">
+                <span class="badge <%= tx.type === 'Invoice' ? 'badge-warning' : 'badge-success' %>"><%= tx.type %></span>
+              </td>
+              <td style="padding: 10px; text-align: right;">
+                <%= tx.type === 'Invoice' ? '₹' + tx.amount.toFixed(2) : '-' %>
+              </td>
+              <td style="padding: 10px; text-align: right;">
+                <%= tx.type === 'Payment' ? '₹' + tx.amount.toFixed(2) : '-' %>
+              </td>
+              <td style="padding: 10px; text-align: center; text-transform: uppercase; font-size: 12px;">
+                <%= tx.status %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>
