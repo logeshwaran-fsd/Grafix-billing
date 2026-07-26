@@ -9,8 +9,8 @@
         <div class="card-header"><h3 class="card-title">Add New Category</h3></div>
         <form action="/categories/add" method="POST">
           <div class="form-group">
-            <label for="name">Category Name *</label>
-            <input type="text" id="name" name="name" class="form-control" required placeholder="e.g. Polymer Plates">
+            <label for="name">Brand Name *</label>
+            <input type="text" id="name" name="name" class="form-control" required placeholder="e.g. Shiny, Polymer">
           </div>
           <div class="form-group">
             <label for="description">Description</label>
@@ -25,10 +25,10 @@
         <div class="table-container">
           <table>
             <thead>
-              <tr>
-                <th>Category Name</th>
+                <th>Brand Name</th>
                 <th>Description</th>
-                <th class="text-center">Products Count</th>
+                <th class="text-center">Count</th>
+                <th>Items (In Database)</th>
                 <th class="no-print">Actions</th>
               </tr>
             </thead>
@@ -37,10 +37,10 @@
                 <tr><td colspan="4" class="table-empty">No categories added yet</td></tr>
               <% } %>
               <% categories.forEach(cat => { %>
-                <tr>
                   <td class="fw-bold"><%= cat.name %></td>
                   <td class="text-secondary"><%= cat.description || 'No description' %></td>
                   <td class="text-center"><span class="badge badge-default"><%= cat.product_count %></span></td>
+                  <td class="text-secondary" style="font-size: 12px; max-width: 300px; white-space: normal;"><%= cat.product_names || 'None' %></td>
                   <td class="no-print">
                     <form action="/categories/delete/<%= cat.id %>" method="POST" class="confirm-delete d-inline">
                       <button type="submit" class="btn btn-danger btn-sm" <%= cat.product_count > 0 ? 'disabled' : '' %>>Delete</button>

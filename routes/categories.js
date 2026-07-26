@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 
@@ -6,7 +6,7 @@ router.get('/', (req, res) => {
   try {
     const db = getDb();
     const categories = db.prepare(`
-      SELECT c.*, COUNT(p.id) as product_count 
+      SELECT c.*, COUNT(p.id) as product_count, GROUP_CONCAT(p.name, ', ') as product_names 
       FROM categories c
       LEFT JOIN products p ON c.id = p.category_id AND p.is_active = 1
       GROUP BY c.id

@@ -75,9 +75,23 @@
 
       <% if (pagination.totalPages > 1) { %>
         <div class="pagination">
-          <% for(let i=1; i<=pagination.totalPages; i++) { %>
-            <a href="/billing?page=<%= i %>&search=<%= search %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>" 
-               class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+          <% 
+            let startPage = Math.max(1, pagination.page - 2);
+            let endPage = Math.min(pagination.totalPages, startPage + 4);
+            startPage = Math.max(1, endPage - 4);
+          %>
+          <% if (startPage > 1) { %>
+            <a href="/billing?page=1&search=<%= search %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>">1</a>
+            <% if (startPage > 2) { %><span>...</span><% } %>
+          <% } %>
+          
+          <% for(let i=startPage; i<=endPage; i++) { %>
+            <a href="/billing?page=<%= i %>&search=<%= search %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+          <% } %>
+          
+          <% if (endPage < pagination.totalPages) { %>
+            <% if (endPage < pagination.totalPages - 1) { %><span>...</span><% } %>
+            <a href="/billing?page=<%= pagination.totalPages %>&search=<%= search %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>"><%= pagination.totalPages %></a>
           <% } %>
         </div>
       <% } %>

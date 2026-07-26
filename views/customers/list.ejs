@@ -57,8 +57,23 @@
 
       <% if (pagination.totalPages > 1) { %>
         <div class="pagination">
-          <% for(let i=1; i<=pagination.totalPages; i++) { %>
+          <% 
+            let startPage = Math.max(1, pagination.page - 2);
+            let endPage = Math.min(pagination.totalPages, startPage + 4);
+            startPage = Math.max(1, endPage - 4);
+          %>
+          <% if (startPage > 1) { %>
+            <a href="/customers?page=1&search=<%= search %>">1</a>
+            <% if (startPage > 2) { %><span>...</span><% } %>
+          <% } %>
+          
+          <% for(let i=startPage; i<=endPage; i++) { %>
             <a href="/customers?page=<%= i %>&search=<%= search %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+          <% } %>
+          
+          <% if (endPage < pagination.totalPages) { %>
+            <% if (endPage < pagination.totalPages - 1) { %><span>...</span><% } %>
+            <a href="/customers?page=<%= pagination.totalPages %>&search=<%= search %>"><%= pagination.totalPages %></a>
           <% } %>
         </div>
       <% } %>

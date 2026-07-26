@@ -17,7 +17,6 @@
       <% } %>
       
       <button onclick="window.print()" class="btn btn-primary">Print A4 🖨️</button>
-      <a href="/billing/<%= invoice.id %>/pos" target="_blank" class="btn btn-primary" style="background:#0284c7; border-color:#0284c7;">Thermal POS 🖨️</a>
       <button onclick="downloadPDF()" class="btn btn-success">Download PDF 📄</button>
       <a href="/billing/new?clone=<%= invoice.id %>" class="btn btn-warning" style="background:#f59e0b; color:#fff; font-weight:600; border:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">Clone Bill 📄</a>
       <% if (user && user.role === 'admin') { %>
@@ -32,11 +31,10 @@
     </div>
 
     <div class="card invoice-print-area" id="invoice-card" style="background:#fff; color:#1e293b; max-width:850px; margin: 0 auto; padding:40px; border-radius:8px; border:1px solid #e2e8f0; font-family:'Inter', sans-serif;">
-      <!-- Invoice Header -->
-      <div style="display:flex; justify-content:space-between; border-bottom:2px solid #e2e8f0; padding-bottom:24px; margin-bottom:24px;">
+      <!-- Invoice Header & Customer Details Compacted -->
+      <div style="display:flex; justify-content:space-between; border-bottom:2px solid #e2e8f0; padding-bottom:12px; margin-bottom:12px;">
         <div>
           <img src="/images/logo.png" alt="Logo" style="max-height: 45px; margin-bottom: 10px; display: block;">
-          <h2 style="font-size:24px; font-weight:800; color:#0f172a; margin-bottom:4px;"><%= settings.company_name || 'Grafix Impression' %></h2>
           <p style="font-size:14px; color:#64748b; line-height:1.4;"><%= settings.company_address || 'Chennai' %><br>Phone: <%= settings.company_phone || '-' %><% if (!isEst) { %><br>GSTIN: <%= settings.company_gstin || '-' %><% } %></p>
         </div>
         <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
@@ -45,20 +43,19 @@
               Original Copy (Buyer)
             </div>
           <% } %>
-          <h1 style="font-size:28px; font-weight:800; color:#14b8a6; margin-bottom:8px;"><%= isEst ? 'ESTIMATE' : 'INVOICE' %></h1>
+          <h1 style="font-size:24px; font-weight:800; color:#14b8a6; margin-bottom:8px;"><%= isEst ? 'ESTIMATE' : 'INVOICE' %></h1>
           <p style="font-size:14px; margin-bottom:4px;"><strong><%= isEst ? 'Estimate' : 'Invoice' %> #:</strong> <%= invoice.invoice_number %></p>
           <p style="font-size:14px; margin-bottom:4px;"><strong>Date:</strong> <%= new Date(invoice.created_at).toLocaleDateString('en-IN') %></p>
-          <p style="font-size:14px;"><strong>Status:</strong> <span style="text-transform:uppercase; font-weight:700; color: <%= invoice.payment_status === 'paid' ? '#10b981' : (invoice.payment_status === 'pending' ? '#f59e0b' : '#ef4444') %>"><%= invoice.payment_status %></span></p>
+          <p style="font-size:14px; margin-bottom:8px;"><strong>Status:</strong> <span style="text-transform:uppercase; font-weight:700; color: <%= invoice.payment_status === 'paid' ? '#10b981' : (invoice.payment_status === 'pending' ? '#f59e0b' : '#ef4444') %>"><%= invoice.payment_status %></span></p>
+          
+          <div style="text-align:right; background:#f8fafc; padding:6px 10px; border-radius:4px; border:1px solid #e2e8f0; max-width: 250px;">
+            <h4 style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:4px;"><%= isEst ? 'Estimate For:' : 'Billed To:' %></h4>
+            <h3 style="font-size:13px; font-weight:700; color:#0f172a; margin-bottom:2px;"><%= invoice.customer_name || 'Walk-in Customer' %></h3>
+            <% if (invoice.customer_phone) { %><p style="font-size:11px; color:#475569; margin-bottom:0;">Phone: <%= invoice.customer_phone %></p><% } %>
+            <% if (!isEst && invoice.customer_gstin) { %><p style="font-size:11px; color:#475569; margin-bottom:0;">GSTIN: <%= invoice.customer_gstin %></p><% } %>
+            <% if (invoice.customer_address) { %><p style="font-size:11px; color:#475569; margin-bottom:0;"><%= invoice.customer_address %></p><% } %>
+          </div>
         </div>
-      </div>
-
-      <!-- Customer Details -->
-      <div style="margin-bottom:32px; background:#f8fafc; padding:16px; border-radius:6px; border:1px solid #e2e8f0;">
-        <h4 style="font-size:12px; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:8px;"><%= isEst ? 'Estimate For:' : 'Billed To:' %></h4>
-        <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin-bottom:4px;"><%= invoice.customer_name || 'Walk-in Customer' %></h3>
-        <% if (invoice.customer_phone) { %><p style="font-size:14px; color:#475569; margin-bottom:2px;">Phone: <%= invoice.customer_phone %></p><% } %>
-        <% if (!isEst && invoice.customer_gstin) { %><p style="font-size:14px; color:#475569; margin-bottom:2px;">GSTIN: <%= invoice.customer_gstin %></p><% } %>
-        <% if (invoice.customer_address) { %><p style="font-size:14px; color:#475569;"><%= invoice.customer_address %></p><% } %>
       </div>
 
       <!-- Items Table -->
@@ -123,7 +120,7 @@
         </div>
       </div>
       <div style="text-align:center; font-size:12px; color:#94a3b8; border-top:1px solid #e2e8f0; margin-top:40px; padding-top:16px;">
-        <%= isEst ? 'This is an estimate quotation' : 'Thank you for your business!' %>
+        <%= isEst ? 'This is an estimate quotation (Only valid for 7 days)' : 'Thank you for your business!' %>
       </div>
     </div>
   </div>
