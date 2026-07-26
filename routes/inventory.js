@@ -2,27 +2,31 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const search = req.query.search || '';
   try {
     const db = getDb();
     let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1';
     const params = [];
+    let paramIndex = 1;
+
     if (search) {
-      query += ' AND (p.name LIKE ? OR p.code LIKE ?)';
+      query += ` AND (p.name ILIKE $${paramIndex++} OR p.code ILIKE $${paramIndex++})`;
       params.push(`%${search}%`, `%${search}%`);
     }
     query += ' ORDER BY p.code ASC';
-    const products = db.prepare(query).all(...params);
+    const productsRes = await db.query(query, params);
+    const products = productsRes.rows;
 
-    const stats = db.prepare(`
+    const statsRes = await db.query(`
       SELECT 
         COUNT(id) as total,
         SUM(CASE WHEN stock_quantity > reorder_level THEN 1 ELSE 0 END) as ok,
         SUM(CASE WHEN stock_quantity <= reorder_level AND stock_quantity > 0 THEN 1 ELSE 0 END) as low,
         SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) as out
       FROM products WHERE is_active = 1
-    `).get();
+    `);
+    const stats = statsRes.rows[0];
 
     res.render('inventory/stock', { pageTitle: 'Stock Overview', activePage: 'inventory', products, stats, search });
   } catch (err) {
@@ -30,26 +34,30 @@ router.get('/', (req, res) => {
   }
 });
 
-router.get('/adjust/:id', (req, res) => {
+router.get('/adjust/:id', async (req, res) => {
   try {
     const db = getDb();
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+    const productRes = await db.query('SELECT * FROM products WHERE id = $1', [req.params.id]);
+    const product = productRes.rows[0];
     if (!product) return res.redirect('/inventory');
-    const transactions = db.prepare(`
+    
+    const transactionsRes = await db.query(`
       SELECT t.*, u.full_name as user_name 
       FROM stock_transactions t
       LEFT JOIN users u ON t.user_id = u.id
-      WHERE t.product_id = ?
+      WHERE t.product_id = $1
       ORDER BY t.created_at DESC
       LIMIT 10
-    `).all(req.params.id);
+    `, [req.params.id]);
+    const transactions = transactionsRes.rows;
+
     res.render('inventory/adjust', { pageTitle: 'Stock Adjustment', activePage: 'inventory', product, transactions });
   } catch (err) {
     res.redirect('/inventory');
   }
 });
 
-router.post('/adjust/:id', (req, res) => {
+router.post('/adjust/:id', async (req, res) => {
   const { type, quantity, notes } = req.body;
   const qty = parseInt(quantity);
   if (!qty || qty <= 0) {
@@ -58,25 +66,30 @@ router.post('/adjust/:id', (req, res) => {
   }
   
   const db = getDb();
-  const tx = db.transaction(() => {
-    const change = type === 'purchase' || type === 'return' ? qty : -qty;
-    db.prepare('UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?').run(change, req.params.id);
-    db.prepare(`
-      INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(req.params.id, type, change, notes, req.session.user.id);
-  });
-
+  let client;
   try {
-    tx();
+    client = await db.connect();
+    await client.query('BEGIN');
+    
+    const change = type === 'purchase' || type === 'return' ? qty : -qty;
+    await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [change, req.params.id]);
+    await client.query(`
+      INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [req.params.id, type, change, notes, req.session.user.id]);
+    
+    await client.query('COMMIT');
     req.session.success = 'Stock adjusted successfully!';
   } catch (err) {
+    if (client) await client.query('ROLLBACK');
     req.session.error = 'Failed to adjust stock: ' + err.message;
+  } finally {
+    if (client) client.release();
   }
   res.redirect(`/inventory/adjust/${req.params.id}`);
 });
 
-router.post('/api/adjust/:id', (req, res) => {
+router.post('/api/adjust/:id', async (req, res) => {
   const { type, quantity, notes } = req.body;
   const qty = parseInt(quantity);
   if (!qty || qty <= 0) {
@@ -84,37 +97,43 @@ router.post('/api/adjust/:id', (req, res) => {
   }
   
   const db = getDb();
+  let client;
   try {
-    const tx = db.transaction(() => {
-      const change = type === 'purchase' || type === 'return' ? qty : -qty;
-      db.prepare('UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?').run(change, req.params.id);
-      db.prepare(`
-        INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(req.params.id, type, change, notes || 'Quick adjustment', req.session.user.id);
-      
-      const newStock = db.prepare('SELECT stock_quantity FROM products WHERE id = ?').get(req.params.id).stock_quantity;
-      return newStock;
-    });
-
-    const newStock = tx();
+    client = await db.connect();
+    await client.query('BEGIN');
+    
+    const change = type === 'purchase' || type === 'return' ? qty : -qty;
+    await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [change, req.params.id]);
+    await client.query(`
+      INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [req.params.id, type, change, notes || 'Quick adjustment', req.session.user.id]);
+    
+    const newStockRes = await client.query('SELECT stock_quantity FROM products WHERE id = $1', [req.params.id]);
+    const newStock = newStockRes.rows[0].stock_quantity;
+    
+    await client.query('COMMIT');
     res.json({ success: true, newStock });
   } catch (err) {
+    if (client) await client.query('ROLLBACK');
     res.status(500).json({ success: false, error: err.message });
+  } finally {
+    if (client) client.release();
   }
 });
 
-router.get('/transactions', (req, res) => {
+router.get('/transactions', async (req, res) => {
   try {
     const db = getDb();
-    const transactions = db.prepare(`
+    const transactionsRes = await db.query(`
       SELECT t.*, p.name as product_name, p.code as product_code, u.full_name as user_name
       FROM stock_transactions t
       JOIN products p ON t.product_id = p.id
       LEFT JOIN users u ON t.user_id = u.id
       ORDER BY t.created_at DESC
       LIMIT 100
-    `).all();
+    `);
+    const transactions = transactionsRes.rows;
     res.render('inventory/transactions', { pageTitle: 'Stock Transactions', activePage: 'inventory', transactions });
   } catch (err) {
     res.redirect('/inventory');

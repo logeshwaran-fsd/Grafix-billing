@@ -1,46 +1,42 @@
-PRAGMA journal_mode = WAL;
-PRAGMA busy_timeout = 5000;
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT CHECK(role IN ('admin', 'cashier')) NOT NULL DEFAULT 'cashier',
   full_name TEXT NOT NULL,
   email TEXT,
   is_active INTEGER DEFAULT 1,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS categories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
   description TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS products (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   code TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
   category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-  unit_price REAL NOT NULL DEFAULT 0,
-  cost_price REAL NOT NULL DEFAULT 0,
+  unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+  cost_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   stock_quantity INTEGER NOT NULL DEFAULT 0,
   reorder_level INTEGER DEFAULT 10,
   unit TEXT DEFAULT 'pcs',
   hsn_code TEXT,
-  gst_rate REAL DEFAULT 18,
+  gst_rate DECIMAL(10,2) DEFAULT 18,
   is_active INTEGER DEFAULT 1,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS customers (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   phone TEXT,
   email TEXT,
@@ -49,49 +45,54 @@ CREATE TABLE IF NOT EXISTS customers (
   city TEXT DEFAULT 'Chennai',
   state TEXT DEFAULT 'Tamil Nadu',
   pincode TEXT,
-  balance REAL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  balance DECIMAL(10,2) DEFAULT 0,
+  opening_balance DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS invoices (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   invoice_number TEXT UNIQUE NOT NULL,
   customer_id INTEGER REFERENCES customers(id),
   user_id INTEGER REFERENCES users(id),
-  subtotal REAL NOT NULL DEFAULT 0,
-  tax_amount REAL NOT NULL DEFAULT 0,
-  discount_amount REAL NOT NULL DEFAULT 0,
-  total_amount REAL NOT NULL DEFAULT 0,
+  subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
+  tax_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0,
   payment_method TEXT DEFAULT 'cash',
   payment_status TEXT CHECK(payment_status IN ('paid', 'pending', 'partial', 'cancelled')) DEFAULT 'paid',
+  invoice_type VARCHAR(50) DEFAULT 'gst',
   notes TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS invoice_items (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
   product_id INTEGER NOT NULL REFERENCES products(id),
   product_name TEXT NOT NULL,
   product_code TEXT NOT NULL,
   quantity INTEGER NOT NULL,
-  unit_price REAL NOT NULL,
-  discount REAL DEFAULT 0,
-  tax_rate REAL DEFAULT 18,
-  tax_amount REAL DEFAULT 0,
-  total REAL NOT NULL
+  unit_price DECIMAL(10,2) NOT NULL,
+  original_unit_price DECIMAL(10,2) DEFAULT 0,
+  discount DECIMAL(10,2) DEFAULT 0,
+  tax_rate DECIMAL(10,2) DEFAULT 18,
+  original_tax_rate DECIMAL(10,2) DEFAULT 18,
+  tax_amount DECIMAL(10,2) DEFAULT 0,
+  total DECIMAL(10,2) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS stock_transactions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES products(id),
   type TEXT CHECK(type IN ('sale', 'purchase', 'adjustment', 'return')) NOT NULL,
   quantity INTEGER NOT NULL,
   reference_id INTEGER,
   notes TEXT,
   user_id INTEGER REFERENCES users(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -100,14 +101,24 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 CREATE TABLE IF NOT EXISTS customer_payments (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   customer_id INTEGER NOT NULL REFERENCES customers(id),
-  amount REAL NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
   payment_method TEXT DEFAULT 'cash',
   reference_number TEXT,
   notes TEXT,
   user_id INTEGER REFERENCES users(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id SERIAL PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers(id),
+  amount DECIMAL(10,2) NOT NULL,
+  payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  payment_method TEXT NOT NULL,
+  narration TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_code ON products(code);

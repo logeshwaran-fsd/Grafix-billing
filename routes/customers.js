@@ -2,58 +2,62 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const search = req.query.search || '';
   const page = parseInt(req.query.page) || 1;
   const limit = 20;
   const offset = (page - 1) * limit;
   try {
-    const db = getDb();
     let query = 'SELECT * FROM customers';
     const params = [];
     if (search) {
-      query += ' WHERE name LIKE ? OR phone LIKE ? OR city LIKE ?';
+      query += ' WHERE name ILIKE $1 OR phone ILIKE $2 OR city ILIKE $3';
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
     const countQuery = query.replace('*', 'COUNT(id) as count');
-    const totalCount = db.prepare(countQuery).get(...params).count;
+    const dbResCount = await getDb().query(countQuery, params);
+    const totalCount = parseInt(dbResCount.rows[0].count, 10);
     const totalPages = Math.ceil(totalCount / limit);
-    query += ' ORDER BY name ASC LIMIT ? OFFSET ?';
+    
+    const limitIdx = params.length + 1;
+    const offsetIdx = params.length + 2;
+    query += ` ORDER BY name ASC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
     params.push(limit, offset);
-    const customers = db.prepare(query).all(...params);
+    
+    const dbRes = await getDb().query(query, params);
+    const customers = dbRes.rows;
     res.render('customers/list', { pageTitle: 'Customers', activePage: 'customers', customers, search, pagination: { page, totalPages } });
   } catch (err) {
     res.status(500).render('error', { pageTitle: 'Error', message: 'Failed to fetch customers', activePage: 'customers' });
   }
 });
 
-router.get('/api/search', (req, res) => {
+router.get('/api/search', async (req, res) => {
   const q = req.query.q || '';
   try {
-    const db = getDb();
-    const customers = db.prepare(`
+    const dbRes = await getDb().query(`
       SELECT id, name, phone, city, balance 
       FROM customers 
-      WHERE name LIKE ? OR phone LIKE ? 
+      WHERE name ILIKE $1 OR phone ILIKE $2 
       LIMIT 10
-    `).all(`${q}%`, `${q}%`);
-    res.json(customers);
+    `, [`${q}%`, `${q}%`]);
+    res.json(dbRes.rows);
   } catch (err) {
     res.status(500).json([]);
   }
 });
 
-router.get('/add', (req, res) => {
+router.get('/add', async (req, res) => {
   res.render('customers/form', { pageTitle: 'Add Customer', activePage: 'customers', customer: null });
 });
 
-router.post('/add', (req, res) => {
+router.post('/add', async (req, res) => {
   const { name, phone, email, address, gstin, city, state, pincode } = req.body;
   try {
-    getDb().prepare(`
+    await getDb().query(`
       INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(name, phone, email, address, gstin, city || 'Chennai', state || 'Tamil Nadu', pincode);
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [name, phone, email, address, gstin, city || 'Chennai', state || 'Tamil Nadu', pincode]);
     req.session.success = 'Customer added successfully!';
     res.redirect('/customers');
   } catch (err) {
@@ -61,24 +65,25 @@ router.post('/add', (req, res) => {
   }
 });
 
-router.post('/api/quick-add', (req, res) => {
+router.post('/api/quick-add', async (req, res) => {
   const { name, phone, city } = req.body;
   if (!name) return res.status(400).json({ success: false, error: 'Name is required' });
   try {
-    const db = getDb();
-    const result = db.prepare(`
+    const dbRes = await getDb().query(`
       INSERT INTO customers (name, phone, city, state) 
-      VALUES (?, ?, ?, 'Tamil Nadu')
-    `).run(name, phone || '', city || 'Chennai');
-    res.json({ success: true, customer: { id: result.lastInsertRowid, name, phone, city } });
+      VALUES ($1, $2, $3, 'Tamil Nadu') RETURNING *
+    `, [name, phone || '', city || 'Chennai']);
+    const customer = dbRes.rows[0];
+    res.json({ success: true, customer: { id: customer.id, name: customer.name, phone: customer.phone, city: customer.city } });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to add customer' });
   }
 });
 
-router.get('/edit/:id', (req, res) => {
+router.get('/edit/:id', async (req, res) => {
   try {
-    const customer = getDb().prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
+    const dbRes = await getDb().query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
+    const customer = dbRes.rows[0];
     if (!customer) return res.redirect('/customers');
     res.render('customers/form', { pageTitle: 'Edit Customer', activePage: 'customers', customer });
   } catch (err) {
@@ -86,14 +91,14 @@ router.get('/edit/:id', (req, res) => {
   }
 });
 
-router.post('/edit/:id', (req, res) => {
+router.post('/edit/:id', async (req, res) => {
   const { name, phone, email, address, gstin, city, state, pincode } = req.body;
   try {
-    getDb().prepare(`
+    await getDb().query(`
       UPDATE customers 
-      SET name = ?, phone = ?, email = ?, address = ?, gstin = ?, city = ?, state = ?, pincode = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(name, phone, email, address, gstin, city, state, pincode, req.params.id);
+      SET name = $1, phone = $2, email = $3, address = $4, gstin = $5, city = $6, state = $7, pincode = $8, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $9
+    `, [name, phone, email, address, gstin, city, state, pincode, req.params.id]);
     req.session.success = 'Customer updated successfully!';
     res.redirect('/customers');
   } catch (err) {
@@ -102,14 +107,14 @@ router.post('/edit/:id', (req, res) => {
   }
 });
 
-router.post('/delete/:id', (req, res) => {
+router.post('/delete/:id', async (req, res) => {
   try {
-    const db = getDb();
-    const count = db.prepare('SELECT COUNT(id) as count FROM invoices WHERE customer_id = ?').get(req.params.id).count;
+    const dbResCount = await getDb().query('SELECT COUNT(id) as count FROM invoices WHERE customer_id = $1', [req.params.id]);
+    const count = parseInt(dbResCount.rows[0].count, 10);
     if (count > 0) {
       req.session.error = 'Cannot delete customer with billing history!';
     } else {
-      db.prepare('DELETE FROM customers WHERE id = ?').run(req.params.id);
+      await getDb().query('DELETE FROM customers WHERE id = $1', [req.params.id]);
       req.session.success = 'Customer deleted successfully!';
     }
   } catch (err) {

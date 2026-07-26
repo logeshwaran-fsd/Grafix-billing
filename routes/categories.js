@@ -2,25 +2,25 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const db = getDb();
-    const categories = db.prepare(`
-      SELECT c.*, COUNT(p.id) as product_count, GROUP_CONCAT(p.name, ', ') as product_names 
+    const dbRes = await getDb().query(`
+      SELECT c.*, COUNT(p.id) as product_count, STRING_AGG(p.name, ', ') as product_names 
       FROM categories c
       LEFT JOIN products p ON c.id = p.category_id AND p.is_active = 1
       GROUP BY c.id
-    `).all();
+    `, []);
+    const categories = dbRes.rows;
     res.render('categories/list', { pageTitle: 'Categories', activePage: 'categories', categories });
   } catch (err) {
     res.status(500).render('error', { pageTitle: 'Error', message: 'Failed to fetch categories', activePage: 'categories' });
   }
 });
 
-router.post('/add', (req, res) => {
+router.post('/add', async (req, res) => {
   const { name, description } = req.body;
   try {
-    getDb().prepare('INSERT INTO categories (name, description) VALUES (?, ?)').run(name, description);
+    await getDb().query('INSERT INTO categories (name, description) VALUES ($1, $2)', [name, description]);
     req.session.success = 'Category added successfully!';
   } catch (err) {
     req.session.error = 'Category name must be unique!';
@@ -28,10 +28,10 @@ router.post('/add', (req, res) => {
   res.redirect('/categories');
 });
 
-router.post('/edit/:id', (req, res) => {
+router.post('/edit/:id', async (req, res) => {
   const { name, description } = req.body;
   try {
-    getDb().prepare('UPDATE categories SET name = ?, description = ? WHERE id = ?').run(name, description, req.params.id);
+    await getDb().query('UPDATE categories SET name = $1, description = $2 WHERE id = $3', [name, description, req.params.id]);
     req.session.success = 'Category updated successfully!';
   } catch (err) {
     req.session.error = 'Failed to update category';
@@ -39,14 +39,14 @@ router.post('/edit/:id', (req, res) => {
   res.redirect('/categories');
 });
 
-router.post('/delete/:id', (req, res) => {
+router.post('/delete/:id', async (req, res) => {
   try {
-    const db = getDb();
-    const count = db.prepare('SELECT COUNT(id) as count FROM products WHERE category_id = ? AND is_active = 1').get(req.params.id).count;
+    const dbRes = await getDb().query('SELECT COUNT(id) as count FROM products WHERE category_id = $1 AND is_active = 1', [req.params.id]);
+    const count = parseInt(dbRes.rows[0].count, 10);
     if (count > 0) {
       req.session.error = 'Cannot delete category containing products!';
     } else {
-      db.prepare('DELETE FROM categories WHERE id = ?').run(req.params.id);
+      await getDb().query('DELETE FROM categories WHERE id = $1', [req.params.id]);
       req.session.success = 'Category deleted successfully!';
     }
   } catch (err) {

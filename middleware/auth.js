@@ -1,4 +1,4 @@
-﻿const { getAllSettings } = require('../database/db');
+const { getAllSettings } = require('../database/db');
 
 function isAuthenticated(req, res, next) {
   if (req.session && req.session.user) {
@@ -11,18 +11,26 @@ function isAdmin(req, res, next) {
   if (req.session && req.session.user && req.session.user.role === 'admin') {
     return next();
   }
-  res.status(403).render('error', { 
-    pageTitle: 'Access Denied', 
-    message: 'You do not have permission to access this page.',
-    user: req.session.user,
-    settings: getAllSettings(),
-    activePage: ''
-  });
+  
+  // Need async IIFE or promise handling since next/render inside
+  getAllSettings().then(settings => {
+    res.status(403).render('error', { 
+      pageTitle: 'Access Denied', 
+      message: 'You do not have permission to access this page.',
+      user: req.session.user,
+      settings: settings,
+      activePage: ''
+    });
+  }).catch(next);
 }
 
-function attachLocals(req, res, next) {
+async function attachLocals(req, res, next) {
   res.locals.user = req.session.user || null;
-  res.locals.settings = getAllSettings();
+  try {
+    res.locals.settings = await getAllSettings();
+  } catch (err) {
+    res.locals.settings = {};
+  }
   res.locals.success = req.session.success || null;
   res.locals.error = req.session.error || null;
   delete req.session.success;

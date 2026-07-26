@@ -1,23 +1,23 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { getDb } = require('../database/db');
 
-router.get('/login', (req, res) => {
+router.get('/login', async (req, res) => {
   if (req.session.user) {
     return res.redirect('/dashboard');
   }
   res.render('login', { error: null });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.render('login', { error: 'Please enter username and password' });
   }
   try {
-    const db = getDb();
-    const user = db.prepare('SELECT * FROM users WHERE username = ? AND is_active = 1').get(username);
+    const dbRes = await getDb().query('SELECT * FROM users WHERE username = $1 AND is_active = 1', [username]);
+    const user = dbRes.rows[0];
     if (user && bcrypt.compareSync(password, user.password_hash)) {
       req.session.user = {
         id: user.id,
@@ -34,7 +34,7 @@ router.post('/login', (req, res) => {
   }
 });
 
-router.get('/logout', (req, res) => {
+router.get('/logout', async (req, res) => {
   req.session.destroy(() => {
     res.redirect('/login');
   });

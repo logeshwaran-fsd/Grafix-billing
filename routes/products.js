@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const search = req.query.search || '';
   const category = req.query.category || '';
   const page = parseInt(req.query.page) || 1;
@@ -13,25 +13,30 @@ router.get('/', (req, res) => {
     const db = getDb();
     let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1';
     const params = [];
+    let paramIndex = 1;
 
     if (search) {
-      query += ' AND (p.name LIKE ? OR p.code LIKE ?)';
+      query += ` AND (p.name ILIKE $${paramIndex++} OR p.code ILIKE $${paramIndex++})`;
       params.push(`%${search}%`, `%${search}%`);
     }
     if (category) {
-      query += ' AND p.category_id = ?';
+      query += ` AND p.category_id = $${paramIndex++}`;
       params.push(category);
     }
 
     const totalCountQuery = query.replace('p.*, c.name as category_name', 'COUNT(p.id) as count');
-    const totalCount = db.prepare(totalCountQuery).get(...params).count;
+    const countRes = await db.query(totalCountQuery, params);
+    const totalCount = parseInt(countRes.rows[0].count);
     const totalPages = Math.ceil(totalCount / limit);
 
-    query += ' ORDER BY p.code ASC LIMIT ? OFFSET ?';
+    query += ` ORDER BY p.code ASC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(limit, offset);
 
-    const products = db.prepare(query).all(...params);
-    const categories = db.prepare('SELECT * FROM categories').all();
+    const productsRes = await db.query(query, params);
+    const products = productsRes.rows;
+
+    const categoriesRes = await db.query('SELECT * FROM categories');
+    const categories = categoriesRes.rows;
 
     res.render('products/list', {
       pageTitle: 'Products',
@@ -48,58 +53,58 @@ router.get('/', (req, res) => {
   }
 });
 
-router.get('/api/search', (req, res) => {
+router.get('/api/search', async (req, res) => {
   const q = req.query.q || '';
   try {
     const db = getDb();
-    const products = db.prepare(`
+    const resDb = await db.query(`
       SELECT id, code, name, unit_price, stock_quantity, gst_rate 
       FROM products 
-      WHERE (name LIKE ? OR code LIKE ?) AND is_active = 1
+      WHERE (name ILIKE $1 OR code ILIKE $2) AND is_active = 1
       LIMIT 10
-    `).all(`${q}%`, `${q}%`);
-    res.json(products);
+    `, [`${q}%`, `${q}%`]);
+    res.json(resDb.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/api/history/:id', (req, res) => {
+router.get('/api/history/:id', async (req, res) => {
   try {
     const db = getDb();
     // Get the last 10 purchases of this product, showing customer and date
-    const history = db.prepare(`
+    const resDb = await db.query(`
       SELECT c.name as customer_name, i.date as invoice_date, ii.quantity, ii.unit_price
       FROM invoice_items ii
       JOIN invoices i ON ii.invoice_id = i.id
       LEFT JOIN customers c ON i.customer_id = c.id
-      WHERE ii.product_id = ?
+      WHERE ii.product_id = $1
       ORDER BY i.date DESC
       LIMIT 10
-    `).all(req.params.id);
-    res.json(history);
+    `, [req.params.id]);
+    res.json(resDb.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/add', (req, res) => {
+router.get('/add', async (req, res) => {
   try {
-    const categories = getDb().prepare('SELECT * FROM categories').all();
-    res.render('products/form', { pageTitle: 'Add Product', activePage: 'products', product: null, categories });
+    const resDb = await getDb().query('SELECT * FROM categories');
+    res.render('products/form', { pageTitle: 'Add Product', activePage: 'products', product: null, categories: resDb.rows });
   } catch (err) {
     res.redirect('/products');
   }
 });
 
-router.post('/add', (req, res) => {
+router.post('/add', async (req, res) => {
   const { code, name, category_id, unit_price, cost_price, stock_quantity, reorder_level, unit, hsn_code, gst_rate, description } = req.body;
   try {
     const db = getDb();
-    db.prepare(`
+    await db.query(`
       INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, reorder_level, unit, hsn_code, gst_rate, description) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(code, name, category_id || null, unit_price, cost_price, stock_quantity, reorder_level, unit, hsn_code, gst_rate, description);
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `, [code, name, category_id || null, unit_price, cost_price, stock_quantity, reorder_level, unit, hsn_code, gst_rate, description]);
     req.session.success = 'Product added successfully!';
     res.redirect('/products');
   } catch (err) {
@@ -109,42 +114,43 @@ router.post('/add', (req, res) => {
   }
 });
 
-router.post('/api/quick-add', (req, res) => {
+router.post('/api/quick-add', async (req, res) => {
   const { code, name, unit_price, cost_price, stock_quantity, gst_rate } = req.body;
   if (!code || !name) return res.status(400).json({ success: false, error: 'Code and Name are required' });
   try {
     const db = getDb();
-    const result = db.prepare(`
+    const result = await db.query(`
       INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, reorder_level, unit, gst_rate, is_active) 
-      VALUES (?, ?, ?, ?, ?, 10, 'pcs', ?, 1)
-    `).run(code, name, unit_price || 0, cost_price || 0, stock_quantity || 0, gst_rate || 18);
-    res.json({ success: true, product: { id: result.lastInsertRowid, code, name, unit_price: unit_price || 0, stock_quantity: stock_quantity || 0, gst_rate: gst_rate || 18 } });
+      VALUES ($1, $2, $3, $4, $5, 10, 'pcs', $6, 1) RETURNING *
+    `, [code, name, unit_price || 0, cost_price || 0, stock_quantity || 0, gst_rate || 18]);
+    const insertedProduct = result.rows[0];
+    res.json({ success: true, product: { id: insertedProduct.id, code, name, unit_price: unit_price || 0, stock_quantity: stock_quantity || 0, gst_rate: gst_rate || 18 } });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to add product (code might not be unique)' });
   }
 });
 
-router.get('/edit/:id', (req, res) => {
+router.get('/edit/:id', async (req, res) => {
   try {
     const db = getDb();
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
-    const categories = db.prepare('SELECT * FROM categories').all();
-    if (!product) return res.redirect('/products');
-    res.render('products/form', { pageTitle: 'Edit Product', activePage: 'products', product, categories });
+    const productRes = await db.query('SELECT * FROM products WHERE id = $1', [req.params.id]);
+    const categoriesRes = await db.query('SELECT * FROM categories');
+    if (productRes.rows.length === 0) return res.redirect('/products');
+    res.render('products/form', { pageTitle: 'Edit Product', activePage: 'products', product: productRes.rows[0], categories: categoriesRes.rows });
   } catch (err) {
     res.redirect('/products');
   }
 });
 
-router.post('/edit/:id', (req, res) => {
+router.post('/edit/:id', async (req, res) => {
   const { code, name, category_id, unit_price, cost_price, reorder_level, unit, hsn_code, gst_rate, description } = req.body;
   try {
     const db = getDb();
-    db.prepare(`
+    await db.query(`
       UPDATE products 
-      SET code = ?, name = ?, category_id = ?, unit_price = ?, cost_price = ?, reorder_level = ?, unit = ?, hsn_code = ?, gst_rate = ?, description = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(code, name, category_id || null, unit_price, cost_price, reorder_level, unit, hsn_code, gst_rate, description, req.params.id);
+      SET code = $1, name = $2, category_id = $3, unit_price = $4, cost_price = $5, reorder_level = $6, unit = $7, hsn_code = $8, gst_rate = $9, description = $10, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $11
+    `, [code, name, category_id || null, unit_price, cost_price, reorder_level, unit, hsn_code, gst_rate, description, req.params.id]);
     req.session.success = 'Product updated successfully!';
     res.redirect('/products');
   } catch (err) {
@@ -154,9 +160,9 @@ router.post('/edit/:id', (req, res) => {
   }
 });
 
-router.post('/delete/:id', (req, res) => {
+router.post('/delete/:id', async (req, res) => {
   try {
-    getDb().prepare('UPDATE products SET is_active = 0 WHERE id = ?').run(req.params.id);
+    await getDb().query('UPDATE products SET is_active = 0 WHERE id = $1', [req.params.id]);
     req.session.success = 'Product deleted successfully!';
   } catch (err) {
     req.session.error = 'Failed to delete product';

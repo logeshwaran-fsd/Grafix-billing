@@ -8,27 +8,7 @@ const { isAuthenticated, isAdmin, attachLocals } = require('./middleware/auth');
 
 const app = express();
 
-initialize();
-
-// Automatic Daily Backup (runs every 24 hours)
-const BACKUP_DIR = path.join(__dirname, 'backups');
-if (!fs.existsSync(BACKUP_DIR)) {
-  fs.mkdirSync(BACKUP_DIR);
-}
-setInterval(() => {
-  try {
-    const dbPath = path.join(__dirname, 'database', 'inventory.db');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(BACKUP_DIR, `inventory_backup_${timestamp}.db`);
-    if (fs.existsSync(dbPath)) {
-      fs.copyFileSync(dbPath, backupPath);
-      console.log(`[Backup] Automated backup created at ${backupPath}`);
-    }
-  } catch (err) {
-    console.error('[Backup Error]', err);
-  }
-}, 24 * 60 * 60 * 1000); // 24 hours
-
+initialize().catch(err => console.error("Database initialization failed:", err));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 

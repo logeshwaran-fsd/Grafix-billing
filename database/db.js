@@ -1,101 +1,107 @@
-const { DatabaseSync } = require('node:sqlite');
+const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const DB_PATH = path.join(__dirname, 'inventory.db');
-let db;
+// Ensure DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  require('dotenv').config();
+}
+
+let pool;
 
 function getDb() {
-  if (!db) {
-    db = new DatabaseSync(DB_PATH);
-    db.exec('PRAGMA journal_mode = WAL');
-    db.exec('PRAGMA busy_timeout = 5000');
-    db.exec('PRAGMA foreign_keys = ON');
-    
-    db.transaction = function(fn) {
-      return (...args) => {
-        db.exec('BEGIN TRANSACTION');
-        try {
-          const res = fn(...args);
-          db.exec('COMMIT');
-          return res;
-        } catch (err) {
-          db.exec('ROLLBACK');
-          throw err;
-        }
-      };
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
+
+    // Provide a helper to run standard async queries
+    pool.queryAsync = async function(text, params) {
+      return this.query(text, params);
+    };
+
+    // Provide a helper for transactions
+    pool.transaction = async function(fn) {
+      const client = await this.connect();
+      try {
+        await client.query('BEGIN');
+        const res = await fn(client);
+        await client.query('COMMIT');
+        return res;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
     };
   }
-  return db;
+  return pool;
 }
 
-function initialize() {
+async function initialize() {
   const database = getDb();
-  const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-  database.exec(schema);
   
-  const userCount = database.prepare('SELECT COUNT(*) as count FROM users').get();
-  if (userCount.count === 0) {
-    const hash = bcrypt.hashSync('admin123', 10);
-    database.prepare('INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)').run('admin', hash, 'admin', 'Administrator');
-  }
-  
-  const seed = fs.readFileSync(path.join(__dirname, 'seed.sql'), 'utf8');
-  database.exec(seed);
-  
-  // Migration: Add invoice_type column to invoices table if not exists
+  // Note: For PostgreSQL, we will run the schema script.
   try {
-    database.exec("ALTER TABLE invoices ADD COLUMN invoice_type TEXT DEFAULT 'gst'");
-  } catch (err) {
-    // Column already exists
-  }
+    const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+    await database.query(schema);
 
-  // Migration: Add opening_balance column to customers table if not exists
-  try {
-    database.exec("ALTER TABLE customers ADD COLUMN opening_balance REAL DEFAULT 0.0");
-  } catch (err) {
-    // Column already exists
-  }
+    const userRes = await database.query('SELECT COUNT(*) as count FROM users');
+    if (parseInt(userRes.rows[0].count, 10) === 0) {
+      const hash = bcrypt.hashSync('admin123', 10);
+      await database.query(
+        'INSERT INTO users (username, password_hash, role, full_name) VALUES ($1, $2, $3, $4)',
+        ['admin', hash, 'admin', 'Administrator']
+      );
+      
+      const seed = fs.readFileSync(path.join(__dirname, 'seed.sql'), 'utf8');
+      await database.query(seed);
+    }
+    
+    // Migration: Add invoice_type if not exists
+    try {
+      await database.query("ALTER TABLE invoices ADD COLUMN invoice_type VARCHAR(50) DEFAULT 'gst'");
+    } catch (err) {}
 
-  // Migration: Add amount_paid column to invoices table if not exists
-  try {
-    database.exec("ALTER TABLE invoices ADD COLUMN amount_paid REAL DEFAULT 0.0");
-  } catch (err) {
-    // Column already exists
-  }
+    // Migration: Add opening_balance
+    try {
+      await database.query("ALTER TABLE customers ADD COLUMN opening_balance DECIMAL(10,2) DEFAULT 0.0");
+    } catch (err) {}
 
-  // Create payments table
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      customer_id INTEGER NOT NULL,
-      amount REAL NOT NULL,
-      payment_date TEXT NOT NULL,
-      payment_method TEXT NOT NULL,
-      narration TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (customer_id) REFERENCES customers(id)
-    )
-  `);
-  
-  console.log('Database initialized successfully');
+    // Migration: Add amount_paid
+    try {
+      await database.query("ALTER TABLE invoices ADD COLUMN amount_paid DECIMAL(10,2) DEFAULT 0.0");
+    } catch (err) {}
+
+  } catch (err) {
+    console.error('Database initialization error:', err);
+  }
 }
 
-function getSetting(key) {
-  const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key);
-  return row ? row.value : null;
+// These must be async now
+async function getSetting(key) {
+  const res = await getDb().query('SELECT value FROM settings WHERE key = $1', [key]);
+  return res.rows.length ? res.rows[0].value : null;
 }
 
-function getAllSettings() {
-  const rows = getDb().prepare('SELECT key, value FROM settings').all();
+async function getAllSettings() {
+  const res = await getDb().query('SELECT key, value FROM settings');
   const settings = {};
-  rows.forEach(row => { settings[row.key] = row.value; });
+  res.rows.forEach(row => { settings[row.key] = row.value; });
   return settings;
 }
 
-function updateSetting(key, value) {
-  getDb().prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value);
+async function updateSetting(key, value) {
+  await getDb().query(`
+    INSERT INTO settings (key, value) 
+    VALUES ($1, $2) 
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `, [key, value]);
 }
 
 module.exports = { getDb, initialize, getSetting, getAllSettings, updateSetting };

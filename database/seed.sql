@@ -1,25 +1,25 @@
-﻿-- Default settings
-INSERT OR IGNORE INTO settings (key, value) VALUES ('company_name', 'Grafix Impression');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('company_address', 'No. 12, Grafix Tower, Chennai, Tamil Nadu');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('company_phone', '9876543210');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('company_email', 'info@grafiximpression.com');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('company_gstin', '33AAAAA1111A1Z1');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('default_tax_rate', '18');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('currency_symbol', 'â‚¹');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('invoice_prefix', 'INV');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('low_stock_threshold', '10');
+-- Default settings
+INSERT INTO settings (key, value) VALUES ('company_name', 'Grafix Impression') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('company_address', 'No. 32 Anderson Street, Parrys, Chennai-600001') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('company_phone', '+91 44 2536 1094') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('company_email', 'grafiximpressionparrys@gmail.com') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('company_gstin', '33AAAAA1111A1Z1') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('default_tax_rate', '18') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('currency_symbol', '₹') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('invoice_prefix', 'INV') ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('low_stock_threshold', '10') ON CONFLICT (key) DO NOTHING;
 
 -- Default categories
-INSERT OR IGNORE INTO categories (name, description) VALUES ('Polymer Plates', 'Printing polymer plates and accessories');
-INSERT OR IGNORE INTO categories (name, description) VALUES ('Chemicals', 'Printing chemicals and solutions');
-INSERT OR IGNORE INTO categories (name, description) VALUES ('Tapes & Adhesives', 'Double-sided tapes, foam tapes, adhesives');
-INSERT OR IGNORE INTO categories (name, description) VALUES ('Stamps & Accessories', 'Rubber stamps, numbering machines, ink');
-INSERT OR IGNORE INTO categories (name, description) VALUES ('Stationery', 'Office and printing stationery');
-INSERT OR IGNORE INTO categories (name, description) VALUES ('Inks', 'Printing and stamp inks');
-INSERT OR IGNORE INTO categories (name, description) VALUES ('General', 'General supplies');
+INSERT INTO categories (name, description) VALUES ('Polymer Plates', 'Printing polymer plates and accessories') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name, description) VALUES ('Chemicals', 'Printing chemicals and solutions') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name, description) VALUES ('Tapes & Adhesives', 'Double-sided tapes, foam tapes, adhesives') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name, description) VALUES ('Stamps & Accessories', 'Rubber stamps, numbering machines, ink') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name, description) VALUES ('Stationery', 'Office and printing stationery') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name, description) VALUES ('Inks', 'Printing and stamp inks') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name, description) VALUES ('General', 'General supplies') ON CONFLICT (name) DO NOTHING;
 
 -- Sample products
-INSERT OR IGNORE INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, reorder_level, unit) VALUES 
+INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, reorder_level, unit) VALUES 
 ('001', 'Polymer Plate 2.84 B', 1, 250.00, 180.00, 1, 5, 'pcs'),
 ('002', 'Polymer Plate 2.84 V', 1, 250.00, 180.00, 166, 10, 'pcs'),
 ('003', 'Plating Washing Chem', 2, 350.00, 250.00, 2, 5, 'ltr'),
@@ -57,7 +57,8 @@ INSERT OR IGNORE INTO products (code, name, category_id, unit_price, cost_price,
 ('036', 'NUMBERING MACH M', 4, 1200.00, 850.00, 0, 2, 'pcs'),
 ('037', 'Common Seal Holder B', 4, 300.00, 200.00, 10, 5, 'pcs'),
 ('038', 'NUMBERING MACH L', 4, 1500.00, 1050.00, 0, 2, 'pcs'),
-('039', 'PEN STAMP', 4, 350.00, 240.00, 43, 5, 'pcs');
+('039', 'PEN STAMP', 4, 350.00, 240.00, 43, 5, 'pcs')
+ON CONFLICT (code) DO NOTHING;
 
-INSERT OR IGNORE INTO customers (name, phone, city) VALUES ('ZYBERDASH INFO', '9876543210', 'Chennai');
-INSERT OR IGNORE INTO customers (name, phone, city) VALUES ('Walk-in Customer', '', 'Chennai');
+INSERT INTO customers (name, phone, city) VALUES ('ZYBERDASH INFO', '9876543210', 'Chennai');
+INSERT INTO customers (name, phone, city) VALUES ('Walk-in Customer', '', 'Chennai');

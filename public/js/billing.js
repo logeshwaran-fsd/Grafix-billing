@@ -510,7 +510,15 @@ async function submitInvoice() {
     });
     const result = await res.json();
     if (result.success) {
-      window.location.href = '/billing/' + (isEditing ? EDIT_INVOICE_ID : result.invoiceId) + '?print=true';
+      // Open the print view in a new tab/window so we don't leave the billing screen
+      window.open('/billing/' + (isEditing ? EDIT_INVOICE_ID : result.invoiceId) + '?print=true', '_blank');
+      
+      // Reload the page to clear the form and start a new bill immediately
+      if (!isEditing) {
+        window.location.reload();
+      } else {
+        window.location.href = '/billing';
+      }
     } else {
       alert(result.error || (isEditing ? 'Failed to update invoice' : 'Failed to create invoice'));
       btn.disabled = false;

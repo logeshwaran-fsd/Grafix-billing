@@ -3,35 +3,31 @@ const router = express.Router();
 const { getDb } = require('../database/db');
 
 // 1. Ledger Dashboard
-router.get('/ledger', (req, res) => {
+router.get('/ledger', async (req, res) => {
   try {
     const db = getDb();
     
-    // Fetch all customers with calculated balances
-    const customers = db.prepare('SELECT * FROM customers ORDER BY name ASC').all();
+    // Fetch all customers with calculated balances directly from Postgres
+    const customersRes = await db.query(`
+      SELECT 
+        c.*,
+        COALESCE((SELECT SUM(total_amount) FROM invoices WHERE customer_id = c.id AND payment_status != 'cancelled'), 0) as total_debit,
+        COALESCE((SELECT SUM(amount) FROM payments WHERE customer_id = c.id), 0) as total_credit
+      FROM customers c
+      ORDER BY c.name ASC
+    `);
+    const customers = customersRes.rows;
     
     const ledgerList = customers.map(cust => {
-      // Sum of invoices (Debit)
-      const invoiceSum = db.prepare(`
-        SELECT COALESCE(SUM(total_amount), 0) as total 
-        FROM invoices 
-        WHERE customer_id = ? AND payment_status != 'cancelled'
-      `).get(cust.id).total;
-      
-      // Sum of payments (Credit)
-      const paymentSum = db.prepare(`
-        SELECT COALESCE(SUM(amount), 0) as total 
-        FROM payments 
-        WHERE customer_id = ?
-      `).get(cust.id).total;
-      
-      const netOutstanding = (cust.opening_balance || 0) + invoiceSum - paymentSum;
+      const invoiceSum = parseFloat(cust.total_debit);
+      const paymentSum = parseFloat(cust.total_credit);
+      const netOutstanding = (parseFloat(cust.opening_balance) || 0) + invoiceSum - paymentSum;
       
       return {
         id: cust.id,
         name: cust.name,
         phone: cust.phone,
-        opening_balance: cust.opening_balance || 0,
+        opening_balance: parseFloat(cust.opening_balance) || 0,
         total_debit: invoiceSum,
         total_credit: paymentSum,
         balance: netOutstanding
@@ -48,7 +44,7 @@ router.get('/ledger', (req, res) => {
       ledgers: ledgerList,
       totalOutstanding,
       totalPaymentsReceived,
-      customers // Pass all customers for the receipt modal selection
+      customers
     });
   } catch (err) {
     console.error(err);
@@ -57,36 +53,39 @@ router.get('/ledger', (req, res) => {
 });
 
 // 2. Customer Ledger Details (Account Statement)
-router.get('/ledger/:id', (req, res) => {
+router.get('/ledger/:id', async (req, res) => {
   const customerId = req.params.id;
   try {
     const db = getDb();
-    const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+    const customerRes = await db.query('SELECT * FROM customers WHERE id = $1', [customerId]);
+    const customer = customerRes.rows[0];
     if (!customer) {
       return res.status(404).render('error', { pageTitle: 'Not Found', message: 'Customer not found', activePage: 'tally' });
     }
     
     // Fetch Invoices (Debits)
-    const invoices = db.prepare(`
+    const invoicesRes = await db.query(`
       SELECT id, invoice_number as reference, total_amount as debit, 0.0 as credit, created_at as date, 'Invoice' as type, invoice_type
       FROM invoices 
-      WHERE customer_id = ? AND payment_status != 'cancelled'
-    `).all(customerId);
+      WHERE customer_id = $1 AND payment_status != 'cancelled'
+    `, [customerId]);
+    const invoices = invoicesRes.rows;
     
     // Fetch Payments (Credits)
-    const payments = db.prepare(`
-      SELECT id, 'PAY-REC-' || printf('%04d', id) as reference, 0.0 as debit, amount as credit, payment_date as date, 'Payment' as type, payment_method as invoice_type
+    const paymentsRes = await db.query(`
+      SELECT id, 'PAY-REC-' || lpad(id::text, 4, '0') as reference, 0.0 as debit, amount as credit, payment_date as date, 'Payment' as type, payment_method as invoice_type
       FROM payments 
-      WHERE customer_id = ?
-    `).all(customerId);
+      WHERE customer_id = $1
+    `, [customerId]);
+    const payments = paymentsRes.rows;
     
     // Combine and Sort Chronologically
     const transactions = [...invoices, ...payments].sort((a, b) => new Date(a.date) - new Date(b.date));
     
     // Compute Running Balance
-    let runningBalance = customer.opening_balance || 0;
+    let runningBalance = parseFloat(customer.opening_balance) || 0;
     const ledgerEntries = transactions.map(tx => {
-      runningBalance = runningBalance + tx.debit - tx.credit;
+      runningBalance = runningBalance + parseFloat(tx.debit) - parseFloat(tx.credit);
       return {
         ...tx,
         running_balance: runningBalance
@@ -107,14 +106,14 @@ router.get('/ledger/:id', (req, res) => {
 });
 
 // 3. Log a Payment Receipt Voucher
-router.post('/payment', (req, res) => {
+router.post('/payment', async (req, res) => {
   const { customer_id, amount, payment_date, payment_method, narration } = req.body;
   try {
     const db = getDb();
-    db.prepare(`
+    await db.query(`
       INSERT INTO payments (customer_id, amount, payment_date, payment_method, narration)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(customer_id, amount, payment_date, payment_method, narration || '');
+      VALUES ($1, $2, $3, $4, $5)
+    `, [customer_id, amount, payment_date, payment_method, narration || '']);
     
     res.redirect('/tally/ledger');
   } catch (err) {
@@ -134,7 +133,7 @@ router.get('/export', (req, res) => {
 });
 
 // 5. XML Generation for Tally Import
-router.get('/export/xml', (req, res) => {
+router.get('/export/xml', async (req, res) => {
   const { from, to, sales_ledger = 'Sales Account', cgst_ledger = 'CGST Ledger', sgst_ledger = 'SGST Ledger' } = req.query;
   
   if (!from || !to) {
@@ -145,13 +144,14 @@ router.get('/export/xml', (req, res) => {
     const db = getDb();
     
     // Fetch all invoices in date range
-    const invoices = db.prepare(`
+    const invoicesRes = await db.query(`
       SELECT i.*, c.name as customer_name 
       FROM invoices i
       LEFT JOIN customers c ON i.customer_id = c.id
-      WHERE date(i.created_at) >= ? AND date(i.created_at) <= ? AND i.payment_status != 'cancelled'
+      WHERE CAST(i.created_at AS DATE) >= $1 AND CAST(i.created_at AS DATE) <= $2 AND i.payment_status != 'cancelled'
       ORDER BY i.created_at ASC
-    `).all(from, to);
+    `, [from, to]);
+    const invoices = invoicesRes.rows;
     
     let xml = `<?xml version="1.0"?>
 <ENVELOPE>
@@ -168,18 +168,20 @@ router.get('/export/xml', (req, res) => {
       </REQUESTDESC>
       <REQUESTDATA>\n`;
       
-    invoices.forEach(inv => {
+    for (const inv of invoices) {
       // Fetch invoice items for ledger detail breakdown
-      const items = db.prepare(`
-        SELECT * FROM invoice_items WHERE invoice_id = ?
-      `).all(inv.id);
+      const itemsRes = await db.query(`
+        SELECT * FROM invoice_items WHERE invoice_id = $1
+      `, [inv.id]);
+      const items = itemsRes.rows;
       
-      const dateStr = inv.created_at.split('T')[0].replace(/-/g, '');
+      const dateObj = new Date(inv.created_at);
+      const dateStr = dateObj.toISOString().split('T')[0].replace(/-/g, '');
       const partyName = inv.customer_name ? inv.customer_name.replace(/&/g, '&amp;') : 'Walk-in Customer';
       
-      const totalAmount = inv.total_amount;
-      const subtotal = inv.subtotal;
-      const taxAmount = inv.tax_amount;
+      const totalAmount = parseFloat(inv.total_amount);
+      const subtotal = parseFloat(inv.subtotal);
+      const taxAmount = parseFloat(inv.tax_amount);
       const cgstVal = (taxAmount / 2).toFixed(2);
       const sgstVal = (taxAmount / 2).toFixed(2);
       
@@ -224,7 +226,7 @@ router.get('/export/xml', (req, res) => {
       
       xml += `          </VOUCHER>
         </TALLYMESSAGE>\n`;
-    });
+    }
     
     xml += `      </REQUESTDATA>
     </IMPORTDATA>
