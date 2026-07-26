@@ -566,11 +566,15 @@ tbody tr:hover { background-color: var(--bg-table-hover); }
 
 /* Print Invoice styles */
 @media print {
+  @page {
+    margin: 5mm;
+  }
   .sidebar, .header-bar, .no-print, .btn {
     display: none !important;
   }
   .main-content {
     margin-left: 0 !important;
+    padding: 0 !important;
   }
   body {
     background-color: #fff !important;
@@ -580,7 +584,23 @@ tbody tr:hover { background-color: var(--bg-table-hover); }
     border: none !important;
     padding: 0 !important;
     box-shadow: none !important;
+    max-width: 135mm !important; /* Slightly wider than exact A6 for better fit on A4 quarter */
+    max-height: 140mm !important; 
+    overflow: hidden;
+    font-size: 11px !important;
+    margin: 0 !important;
   }
+  .invoice-print-area h2 { font-size: 16px !important; margin-bottom: 2px !important; }
+  .invoice-print-area h3 { font-size: 14px !important; margin-bottom: 2px !important; }
+  .invoice-print-area p, .invoice-print-area div { font-size: 10px !important; }
+  .invoice-print-area th, .invoice-print-area td { 
+    padding: 4px 2px !important; 
+    font-size: 10px !important; 
+  }
+  /* Hide unnecessary padding/margins for A6 */
+  .invoice-print-area .card-body { padding: 5px !important; }
+  .invoice-print-area table { margin-bottom: 5px !important; }
+  .invoice-print-area .header-details { margin-bottom: 10px !important; padding-bottom: 5px !important; }
 }
 
 /* Mobile Responsiveness */

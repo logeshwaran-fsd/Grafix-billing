@@ -342,11 +342,23 @@ function handleGridNav(e, type, index) {
 
 function updateQty(index, value) {
   const qty = parseInt(value);
-  if (qty > 0 && qty <= invoiceItems[index].stock_quantity) {
-    invoiceItems[index].quantity = qty;
+  const item = invoiceItems[index];
+  
+  if (qty > 0 && qty <= item.stock_quantity) {
+    item.quantity = qty;
+    renderItems();
+  } else if (qty > item.stock_quantity) {
+    pendingProductToAdd = { ...item, id: item.product_id, targetQty: qty, updateIndex: index };
+    document.getElementById('quick-stock-product-name').textContent = item.name;
+    document.getElementById('quick-stock-product-id').value = item.product_id;
+    document.getElementById('quick-stock-qty').value = qty - item.stock_quantity;
+    document.getElementById('quick-stock-modal').style.display = 'flex';
+    document.getElementById('quick-stock-qty').focus();
+    
+    // Re-render to reset the visual input box back to the old valid quantity until stock is approved
     renderItems();
   } else {
-    alert('Invalid quantity or out of stock!');
+    alert('Invalid quantity!');
     renderItems();
   }
 }
@@ -529,10 +541,18 @@ async function submitQuickStock() {
     });
     const result = await res.json();
     if (result.success) {
-      pendingProductToAdd.stock_quantity = result.newStock;
-      const p = pendingProductToAdd;
-      closeQuickStockModal();
-      addItem(p);
+      if (pendingProductToAdd.updateIndex !== undefined) {
+        const idx = pendingProductToAdd.updateIndex;
+        invoiceItems[idx].stock_quantity = result.newStock;
+        invoiceItems[idx].quantity = pendingProductToAdd.targetQty <= result.newStock ? pendingProductToAdd.targetQty : result.newStock;
+        closeQuickStockModal();
+        renderItems();
+      } else {
+        pendingProductToAdd.stock_quantity = result.newStock;
+        const p = pendingProductToAdd;
+        closeQuickStockModal();
+        addItem(p);
+      }
     } else {
       alert(result.error || 'Failed to update stock');
     }
