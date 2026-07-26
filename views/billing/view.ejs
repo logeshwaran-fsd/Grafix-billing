@@ -151,5 +151,15 @@
     };
     html2pdf().from(element).set(opt).save();
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('print') === 'true') {
+      // Small timeout to ensure fonts/images are loaded before opening print dialog
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    }
+  });
 </script>
 <%- include('../partials/footer') %>
