@@ -32,7 +32,7 @@ router.get('/api/search', (req, res) => {
   try {
     const db = getDb();
     const customers = db.prepare(`
-      SELECT id, name, phone, city 
+      SELECT id, name, phone, city, balance 
       FROM customers 
       WHERE name LIKE ? OR phone LIKE ? 
       LIMIT 10

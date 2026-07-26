@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const customers = await res.json();
       if (customers.length > 0) {
         custDropdown.innerHTML = customers.map(c => `
-          <div class="dropdown-item" onclick="selectCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}')">
+          <div class="dropdown-item" onclick="selectCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}', ${c.balance || 0})">
             <span>${c.name}</span>
             <span>${c.phone || ''}</span>
           </div>
@@ -178,10 +178,30 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function selectCustomer(id, name) {
+function selectCustomer(id, name, balance = 0) {
   document.getElementById('customer-id').value = id;
   document.getElementById('customer-search').value = name;
   document.getElementById('customer-dropdown').style.display = 'none';
+  
+  const walletSection = document.getElementById('wallet-section');
+  const walletBalanceDisplay = document.getElementById('wallet-balance-display');
+  const applyWalletCheckbox = document.getElementById('apply-wallet');
+  const customerWalletBalance = document.getElementById('customer-wallet-balance');
+  
+  // Balance is negative if the customer has an advance (wallet)
+  if (balance < 0) {
+    const advance = Math.abs(balance);
+    walletSection.style.display = 'block';
+    walletBalanceDisplay.textContent = '₹' + advance.toFixed(2);
+    customerWalletBalance.value = advance;
+    applyWalletCheckbox.checked = false; // default to unchecked
+  } else {
+    walletSection.style.display = 'none';
+    customerWalletBalance.value = 0;
+    applyWalletCheckbox.checked = false;
+  }
+  
+  calculateTotals();
   document.getElementById('payment-method').focus();
 }
 
@@ -370,12 +390,75 @@ function calculateTotals() {
   });
 
   const grandTotal = subtotal - discount + tax;
+  let netPayable = grandTotal;
+  
+  const applyWallet = document.getElementById('apply-wallet');
+  const walletDeductionRow = document.getElementById('wallet-deduction-row');
+  const walletDeductionDisplay = document.getElementById('wallet-deduction-display');
+  const customerWalletBalance = parseFloat(document.getElementById('customer-wallet-balance').value) || 0;
+  
+  let walletAppliedAmount = 0;
+  if (applyWallet && applyWallet.checked && customerWalletBalance > 0) {
+    walletAppliedAmount = Math.min(grandTotal, customerWalletBalance);
+    netPayable = grandTotal - walletAppliedAmount;
+    walletDeductionRow.style.setProperty('display', 'flex', 'important');
+    walletDeductionDisplay.textContent = '- ₹' + walletAppliedAmount.toLocaleString('en-IN', {minimumFractionDigits: 2});
+  } else if (walletDeductionRow) {
+    walletDeductionRow.style.setProperty('display', 'none', 'important');
+    walletAppliedAmount = 0;
+  }
 
   document.getElementById('subtotal-display').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
   document.getElementById('tax-display').textContent = '₹' + tax.toLocaleString('en-IN', {minimumFractionDigits: 2});
   document.getElementById('discount-display').textContent = '₹' + discount.toLocaleString('en-IN', {minimumFractionDigits: 2});
   document.getElementById('grandtotal-display').textContent = '₹' + grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+  
+  const netPayableDisplay = document.getElementById('netpayable-display');
+  if(netPayableDisplay) {
+    netPayableDisplay.textContent = '₹' + netPayable.toLocaleString('en-IN', {minimumFractionDigits: 2});
+  }
+  
+  // Set default Amount Paid to Net Payable if it's currently 0 or matches previous net payable
+  const amtPaidInput = document.getElementById('amount-paid');
+  if (amtPaidInput && (parseFloat(amtPaidInput.value) === 0 || !amtPaidInput.dataset.manuallyEdited)) {
+    amtPaidInput.value = netPayable.toFixed(2);
+  }
+  
+  updateChangeDisplay();
 }
+
+function updateChangeDisplay() {
+  const netPayableText = document.getElementById('netpayable-display');
+  if (!netPayableText) return;
+  const netPayable = parseFloat(netPayableText.textContent.replace('₹', '').replace(/,/g, '')) || 0;
+  const amtPaid = parseFloat(document.getElementById('amount-paid').value) || 0;
+  
+  const changeDisplay = document.getElementById('change-display');
+  
+  if (amtPaid > netPayable) {
+    const change = amtPaid - netPayable;
+    changeDisplay.style.display = 'block';
+    changeDisplay.textContent = 'Change to Return / Add to Wallet: ₹' + change.toLocaleString('en-IN', {minimumFractionDigits: 2});
+    changeDisplay.style.color = 'var(--success)';
+  } else if (amtPaid < netPayable) {
+    const dues = netPayable - amtPaid;
+    changeDisplay.style.display = 'block';
+    changeDisplay.textContent = 'Pending Dues (Credit): ₹' + dues.toLocaleString('en-IN', {minimumFractionDigits: 2});
+    changeDisplay.style.color = 'var(--danger)';
+  } else {
+    changeDisplay.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const amtPaidInput = document.getElementById('amount-paid');
+  if (amtPaidInput) {
+    amtPaidInput.addEventListener('input', () => {
+      amtPaidInput.dataset.manuallyEdited = 'true';
+      updateChangeDisplay();
+    });
+  }
+});
 
 async function submitInvoice() {
   if (invoiceItems.length === 0) {
@@ -390,6 +473,8 @@ async function submitInvoice() {
     notes: document.getElementById('invoice-notes').value,
     overall_discount: parseFloat(document.getElementById('overall-discount').value) || 0,
     invoice_type: document.getElementById('invoice-type').value,
+    amount_paid: parseFloat(document.getElementById('amount-paid').value) || 0,
+    apply_wallet: document.getElementById('apply-wallet') ? document.getElementById('apply-wallet').checked : false,
     items: invoiceItems
   };
 
@@ -397,24 +482,27 @@ async function submitInvoice() {
   btn.disabled = true;
   btn.textContent = 'Processing...';
 
+  const isEditing = typeof EDIT_INVOICE_ID !== 'undefined' && EDIT_INVOICE_ID;
+  const url = isEditing ? `/billing/${EDIT_INVOICE_ID}/edit` : '/billing/create';
+
   try {
-    const res = await fetch('/billing/create', {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
     const result = await res.json();
     if (result.success) {
-      window.location.href = '/billing/' + result.invoiceId + '/pos';
+      window.location.href = '/billing/' + (isEditing ? EDIT_INVOICE_ID : result.invoiceId) + '/pos';
     } else {
-      alert(result.error || 'Failed to create invoice');
+      alert(result.error || (isEditing ? 'Failed to update invoice' : 'Failed to create invoice'));
       btn.disabled = false;
-      btn.textContent = 'Create Invoice & Print';
+      btn.textContent = isEditing ? 'Update Invoice & Print' : 'Create Invoice & Print';
     }
   } catch (err) {
-    alert('Error creating invoice');
+    alert(isEditing ? 'Error updating invoice' : 'Error creating invoice');
     btn.disabled = false;
-    btn.textContent = 'Create Invoice & Print';
+    btn.textContent = isEditing ? 'Update Invoice & Print' : 'Create Invoice & Print';
   }
 }
 

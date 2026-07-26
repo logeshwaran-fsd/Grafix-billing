@@ -58,6 +58,13 @@ function initialize() {
     // Column already exists
   }
 
+  // Migration: Add amount_paid column to invoices table if not exists
+  try {
+    database.exec("ALTER TABLE invoices ADD COLUMN amount_paid REAL DEFAULT 0.0");
+  } catch (err) {
+    // Column already exists
+  }
+
   // Create payments table
   database.exec(`
     CREATE TABLE IF NOT EXISTS payments (

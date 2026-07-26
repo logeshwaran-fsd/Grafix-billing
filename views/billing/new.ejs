@@ -65,6 +65,16 @@
             <div id="customer-dropdown" class="autocomplete-dropdown" style="display:none; position:absolute; width:100%; z-index:1000; background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-lg); max-height:200px; overflow-y:auto; border-radius:8px; margin-top:4px;"></div>
           </div>
 
+          <div id="wallet-section" style="display:none; background: var(--success-bg); padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--success);">
+            <div class="d-flex justify-between align-items-center">
+              <span class="fw-bold" style="color: var(--success);">Wallet Advance: <span id="wallet-balance-display">₹0.00</span></span>
+              <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer; font-weight:600;">
+                <input type="checkbox" id="apply-wallet" onchange="calculateTotals()"> Apply
+              </label>
+            </div>
+            <input type="hidden" id="customer-wallet-balance" value="0">
+          </div>
+
           <div class="form-group">
             <label for="payment-method">Payment Method</label>
             <select id="payment-method" class="form-control">
@@ -106,10 +116,25 @@
               <span>Total Discount:</span>
               <span id="discount-display">₹0.00</span>
             </div>
-            <div class="d-flex justify-between fw-bold fs-2xl text-accent mt-3" style="border-top:2px solid var(--accent); padding-top:12px;">
-              <span>Total:</span>
+            <div class="d-flex justify-between fw-bold fs-2xl mt-3" style="border-top:2px solid var(--border); padding-top:12px;">
+              <span>Grand Total:</span>
               <span id="grandtotal-display">₹0.00</span>
             </div>
+            <div class="d-flex justify-between fw-bold fs-xl mt-2 text-danger" id="wallet-deduction-row" style="display:none !important;">
+              <span>Wallet Applied:</span>
+              <span id="wallet-deduction-display">- ₹0.00</span>
+            </div>
+            <div class="d-flex justify-between fw-bold fs-2xl text-accent mt-2">
+              <span>Net Payable:</span>
+              <span id="netpayable-display">₹0.00</span>
+            </div>
+          </div>
+
+          <div class="form-group mt-3 p-3" style="background:var(--bg-primary); border-radius:8px; border:1px solid var(--border);">
+            <label for="amount-paid" class="fw-bold fs-lg text-success">Amount Paid by Customer (₹)</label>
+            <input type="number" id="amount-paid" class="form-control" style="font-size:1.25rem; font-weight:bold; color:var(--success);" value="0" min="0" step="0.01">
+            <div id="change-display" class="mt-2 text-muted fw-bold fs-sm" style="display:none;">Change to Return: ₹0.00</div>
+          </div>
           </div>
 
           <button type="button" id="submit-invoice-btn" class="btn btn-primary btn-block mt-4" onclick="submitInvoice()">Create Invoice & Print</button>
@@ -120,7 +145,8 @@
   </div>
 </div>
 <script>
-  const CLONE_DATA = <%- cloneData ? JSON.stringify(cloneData) : 'null' %>;
+  const CLONE_DATA = <%- typeof cloneData !== 'undefined' && cloneData ? JSON.stringify(cloneData) : 'null' %>;
+  const EDIT_INVOICE_ID = <%- typeof editInvoiceId !== 'undefined' && editInvoiceId ? editInvoiceId : 'null' %>;
 </script>
 <script src="/js/billing.js"></script>
 <%- include('../partials/footer') %>
