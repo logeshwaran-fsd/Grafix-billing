@@ -1,5 +1,8 @@
 <div class="header-bar no-print">
-  <h1><%= pageTitle %></h1>
+  <div style="display:flex; align-items:center;">
+    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
+    <h1><%= pageTitle %></h1>
+  </div>
   <div class="header-user">
     <span class="badge badge-purple"><%= user ? user.role.toUpperCase() : '' %></span>
     <span class="fw-600"><%= user ? user.full_name : '' %></span>
