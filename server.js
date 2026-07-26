@@ -1,9 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
 const fs = require('fs');
-const { initialize } = require('./database/db');
+const { initialize, getDb } = require('./database/db');
 const { isAuthenticated, isAdmin, attachLocals } = require('./middleware/auth');
 
 const app = express();
@@ -16,6 +17,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
+  store: new pgSession({
+    pool: getDb(),
+    tableName: 'session',
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET || 'default-secret',
   resave: false,
   saveUninitialized: false,
