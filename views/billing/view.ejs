@@ -35,7 +35,12 @@
       <div style="display:flex; justify-content:space-between; border-bottom:2px solid #e2e8f0; padding-bottom:12px; margin-bottom:12px;">
         <div>
           <img src="/images/logo.png" alt="Logo" style="max-height: 45px; margin-bottom: 10px; display: block;">
-          <p style="font-size:14px; color:#64748b; line-height:1.4;"><%= settings.company_address || 'Chennai' %><br>Phone: <%= settings.company_phone || '-' %><% if (!isEst) { %><br>GSTIN: <%= settings.company_gstin || '-' %><% } %></p>
+          <p style="font-size:14px; color:#64748b; line-height:1.4;">
+            No. 32 Anderson Street,<br>
+            Parrys, Chennai-600001<br>
+            Ph: +91 44 2536 1094<br>
+            grafiximpressionparrys@gmail.com
+          </p>
         </div>
         <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
           <% if (!isEst) { %>
@@ -43,8 +48,8 @@
               Original Copy (Buyer)
             </div>
           <% } %>
-          <h1 style="font-size:24px; font-weight:800; color:#14b8a6; margin-bottom:8px;"><%= isEst ? 'ESTIMATE' : 'INVOICE' %></h1>
-          <p style="font-size:14px; margin-bottom:4px;"><strong><%= isEst ? 'Estimate' : 'Invoice' %> #:</strong> <%= invoice.invoice_number %></p>
+          <h1 style="font-size:24px; font-weight:800; color:#14b8a6; margin-bottom:8px;">ESTIMATE</h1>
+          <p style="font-size:14px; margin-bottom:4px;"><strong>Estimate #:</strong> <%= invoice.invoice_number %></p>
           <p style="font-size:14px; margin-bottom:4px;"><strong>Date:</strong> <%= new Date(invoice.created_at).toLocaleDateString('en-IN') %></p>
           <p style="font-size:14px; margin-bottom:8px;"><strong>Status:</strong> <span style="text-transform:uppercase; font-weight:700; color: <%= invoice.payment_status === 'paid' ? '#10b981' : (invoice.payment_status === 'pending' ? '#f59e0b' : '#ef4444') %>"><%= invoice.payment_status %></span></p>
           
@@ -63,7 +68,6 @@
         <thead>
           <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
             <th style="padding:12px; text-align:left; font-size:12px; font-weight:700; color:#475569;">#</th>
-            <th style="padding:12px; text-align:left; font-size:12px; font-weight:700; color:#475569;">Code</th>
             <th style="padding:12px; text-align:left; font-size:12px; font-weight:700; color:#475569;">Product</th>
             <th style="padding:12px; text-align:center; font-size:12px; font-weight:700; color:#475569;">Qty</th>
             <th style="padding:12px; text-align:right; font-size:12px; font-weight:700; color:#475569;">Rate</th>
@@ -78,7 +82,6 @@
           <% items.forEach((item, index) => { %>
             <tr style="border-bottom:1px solid #e2e8f0;">
               <td style="padding:12px; font-size:14px;"><%= index + 1 %></td>
-              <td style="padding:12px; font-size:14px;"><%= item.product_code %></td>
               <td style="padding:12px; font-size:14px; font-weight:600;"><%= item.product_name %></td>
               <td style="padding:12px; font-size:14px; text-align:center;"><%= item.quantity %></td>
               <td style="padding:12px; font-size:14px; text-align:right;">₹<%= item.unit_price.toFixed(2) %></td>

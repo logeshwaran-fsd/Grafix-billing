@@ -297,20 +297,19 @@ function renderItems() {
     return `
       <tr>
         <td>${index + 1}</td>
-        <td><span class="badge badge-default">${item.code}</span></td>
         <td class="fw-bold">${item.name}</td>
         <td>
-          <input type="number" class="form-control qty-input" style="width: 70px; padding: 6px;" value="${item.quantity}" min="1" max="${item.stock_quantity}" onchange="updateQty(${index}, this.value)" onkeydown="handleGridNav(event, 'qty', ${index})">
+          <input type="number" class="form-control qty-input" style="width: 55px; padding: 4px;" value="${item.quantity}" min="1" max="${item.stock_quantity}" onchange="updateQty(${index}, this.value)" onkeydown="handleGridNav(event, 'qty', ${index})">
         </td>
         <td>
           <div style="position:relative; display:flex; align-items:center;">
-            <span style="position:absolute; left:8px; color:var(--text-secondary)">₹</span>
-            <input type="number" class="form-control price-input" style="width: 90px; padding: 6px 6px 6px 20px;" value="${item.unit_price}" step="0.01" min="0" onchange="updatePrice(${index}, this.value)" onkeydown="handleGridNav(event, 'price', ${index})">
-            ${item.unit_price !== item.original_unit_price ? `<button type="button" class="btn btn-sm" style="padding:2px 5px; margin-left:4px; background:none; color:var(--accent); border:none; cursor:pointer;" onclick="resetPrice(${index})" title="Reset to Original Price (₹${item.original_unit_price})">↺</button>` : ''}
+            <span style="position:absolute; left:6px; color:var(--text-secondary); font-size:12px;">₹</span>
+            <input type="number" class="form-control price-input" style="width: 75px; padding: 4px 4px 4px 16px;" value="${item.unit_price}" step="0.01" min="0" onchange="updatePrice(${index}, this.value)" onkeydown="handleGridNav(event, 'price', ${index})">
+            ${item.unit_price !== item.original_unit_price ? `<button type="button" class="btn btn-sm" style="padding:1px 3px; margin-left:2px; background:none; color:var(--accent); border:none; cursor:pointer; font-size:10px;" onclick="resetPrice(${index})" title="Reset to Original Price (₹${item.original_unit_price})">↺</button>` : ''}
           </div>
         </td>
         <td>
-          <input type="number" class="form-control discount-input" style="width: 80px; padding: 6px;" value="${item.discount}" min="0" onchange="updateDiscount(${index}, this.value)" onkeydown="handleGridNav(event, 'discount', ${index})">
+          <input type="number" class="form-control discount-input" style="width: 60px; padding: 4px;" value="${item.discount}" min="0" onchange="updateDiscount(${index}, this.value)" onkeydown="handleGridNav(event, 'discount', ${index})">
         </td>
         <td class="text-center">${item.tax_rate}%</td>
         <td class="text-right text-muted">₹${gstAmt.toFixed(2)}</td>
@@ -329,6 +328,12 @@ function handleGridNav(e, type, index) {
   if (e.key === 'Enter') {
     e.preventDefault();
     if (type === 'qty') {
+      const prices = document.querySelectorAll('.price-input');
+      if (prices[index]) {
+        prices[index].focus();
+        prices[index].select();
+      }
+    } else if (type === 'price') {
       const discounts = document.querySelectorAll('.discount-input');
       if (discounts[index]) {
         discounts[index].focus();
