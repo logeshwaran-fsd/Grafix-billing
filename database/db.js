@@ -1,7 +1,12 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
+
+// Parse PostgreSQL NUMERIC/DECIMAL (OID 1700) as float instead of string
+types.setTypeParser(1700, function(val) {
+  return parseFloat(val);
+});
 
 // Ensure DATABASE_URL is set
 if (!process.env.DATABASE_URL) {
