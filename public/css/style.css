@@ -1,6 +1,8 @@
 /* ==================================================
-   GRAFIX IMPRESSION - Design System (Premium Dark Theme)
+   GRAFIX IMPRESSION - Design System (Premium Theme)
    ================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 
 :root {
   /* Pearl White Theme */
@@ -50,11 +52,12 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
