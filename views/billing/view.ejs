@@ -34,7 +34,15 @@
       <!-- Invoice Header & Customer Details Compacted -->
       <div style="display:flex; justify-content:space-between; border-bottom:2px solid #e2e8f0; padding-bottom:12px; margin-bottom:12px;">
         <div>
-          <img src="/images/logo.png" alt="Logo" style="max-height: 45px; margin-bottom: 10px; display: block;">
+          <svg width="0" height="0" style="position:absolute;">
+            <filter id="remove-black" color-interpolation-filters="sRGB">
+              <feColorMatrix type="matrix" values="1 0 0 0 0
+                                                   0 1 0 0 0
+                                                   0 0 1 0 0
+                                                   1.5 1.5 1.5 0 -0.1" />
+            </filter>
+          </svg>
+          <img src="/images/logo.png" alt="Logo" style="max-height: 45px; margin-bottom: 10px; display: block; filter: url(#remove-black);">
           <p style="font-size:14px; color:#64748b; line-height:1.4;">
             No. 32 Anderson Street,<br>
             Parrys, Chennai-600001<br>
@@ -44,11 +52,9 @@
         </div>
         <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
           <% if (!isEst) { %>
-            <div id="print-copy-badge" style="border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
-              Original Copy (Buyer)
-            </div>
+            <!-- Badge removed -->
           <% } %>
-          <h1 style="font-size:24px; font-weight:800; color:#14b8a6; margin-bottom:8px;">ESTIMATE</h1>
+          <h1 style="font-size:24px; font-weight:800; color:#14b8a6; margin-bottom:8px; margin-top:0;">ESTIMATE</h1>
           <p style="font-size:14px; margin-bottom:4px;"><strong>Estimate #:</strong> <%= invoice.invoice_number %></p>
           <p style="font-size:14px; margin-bottom:4px;"><strong>Date:</strong> <%= new Date(invoice.created_at).toLocaleDateString('en-IN') %></p>
           <p style="font-size:14px; margin-bottom:8px;"><strong>Status:</strong> <span style="text-transform:uppercase; font-weight:700; color: <%= invoice.payment_status === 'paid' ? '#10b981' : (invoice.payment_status === 'pending' ? '#f59e0b' : '#ef4444') %>"><%= invoice.payment_status %></span></p>
