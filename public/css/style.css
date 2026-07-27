@@ -584,9 +584,8 @@ tbody tr:hover { background-color: var(--bg-table-hover); }
     border: none !important;
     padding: 0 !important;
     box-shadow: none !important;
-    max-width: 135mm !important; /* Slightly wider than exact A6 for better fit on A4 quarter */
-    max-height: 140mm !important; 
-    overflow: hidden;
+    max-width: 100% !important;
+    overflow: visible !important;
     font-size: 11px !important;
     margin: 0 !important;
   }

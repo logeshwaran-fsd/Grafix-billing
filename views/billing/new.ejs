@@ -14,7 +14,7 @@
               <input type="text" id="product-search" class="form-control" style="flex: 1;" placeholder="Type product code or name to search..." autocomplete="off">
               <button type="button" class="btn btn-primary" onclick="openQuickProdModal()" title="Add New Product" style="padding: 0 16px; font-weight: bold;">+</button>
             </div>
-            <div id="product-dropdown" class="autocomplete-dropdown" style="display:none; position:absolute; width:100%; z-index:1000; background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-lg); max-height:250px; overflow-y:auto; border-radius:8px; margin-top:4px;"></div>
+            <div id="product-dropdown" class="autocomplete-dropdown" style="display:none; position:absolute; width:100%; z-index:1000; background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-lg); max-height:450px; overflow-y:auto; border-radius:8px; margin-top:4px;"></div>
             <div id="product-history" class="mt-2 text-muted" style="font-size: 0.85rem; display:none;"></div>
           </div>
 
@@ -27,14 +27,12 @@
                   <th>Qty</th>
                   <th class="text-right">Price</th>
                   <th>Discount (₹)</th>
-                  <th class="text-center">GST</th>
-                  <th class="text-right">GST Amt</th>
                   <th class="text-right">Total</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody id="invoice-items-body">
-                <tr><td colspan="9" class="table-empty">Search products to start billing</td></tr>
+                <tr><td colspan="7" class="table-empty">Search products to start billing</td></tr>
               </tbody>
             </table>
           </div>
@@ -49,8 +47,7 @@
           <div class="form-group">
             <label for="invoice-type" class="fw-bold" style="color:var(--accent);">Bill Type</label>
             <select id="invoice-type" class="form-control" onchange="onInvoiceTypeChange()">
-              <option value="gst" selected>GST Invoice (Taxable)</option>
-              <option value="estimate">Estimate / Quotation (Non-Tax)</option>
+              <option value="estimate" selected>Estimate / Quotation (Non-Tax)</option>
             </select>
           </div>
 
@@ -106,10 +103,6 @@
             <div class="d-flex justify-between fs-sm text-secondary mb-1">
               <span>Subtotal:</span>
               <span id="subtotal-display">₹0.00</span>
-            </div>
-            <div class="d-flex justify-between fs-sm text-secondary mb-1">
-              <span>Total Tax:</span>
-              <span id="tax-display">₹0.00</span>
             </div>
             <div class="d-flex justify-between fs-sm text-secondary mb-1">
               <span>Total Discount:</span>

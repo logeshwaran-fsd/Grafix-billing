@@ -311,8 +311,6 @@ function renderItems() {
         <td>
           <input type="number" class="form-control discount-input" style="width: 60px; padding: 4px;" value="${item.discount}" min="0" onchange="updateDiscount(${index}, this.value)" onkeydown="handleGridNav(event, 'discount', ${index})">
         </td>
-        <td class="text-center">${item.tax_rate}%</td>
-        <td class="text-right text-muted">₹${gstAmt.toFixed(2)}</td>
         <td class="text-right fw-bold">₹${total.toFixed(2)}</td>
         <td>
           <button type="button" class="btn btn-danger btn-sm" onclick="removeItem(${index})">✕</button>
@@ -426,7 +424,6 @@ function calculateTotals() {
   }
 
   document.getElementById('subtotal-display').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
-  document.getElementById('tax-display').textContent = '₹' + tax.toLocaleString('en-IN', {minimumFractionDigits: 2});
   document.getElementById('discount-display').textContent = '₹' + discount.toLocaleString('en-IN', {minimumFractionDigits: 2});
   document.getElementById('grandtotal-display').textContent = '₹' + grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
   
