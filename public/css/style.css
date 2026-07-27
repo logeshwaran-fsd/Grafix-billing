@@ -568,6 +568,7 @@ tbody tr:hover { background-color: var(--bg-table-hover); }
 @media print {
   @page {
     margin: 5mm;
+    size: A6 portrait;
   }
   .sidebar, .header-bar, .no-print, .btn {
     display: none !important;
@@ -584,22 +585,29 @@ tbody tr:hover { background-color: var(--bg-table-hover); }
     border: none !important;
     padding: 0 !important;
     box-shadow: none !important;
-    max-width: 100% !important;
-    overflow: visible !important;
-    font-size: 11px !important;
+    max-width: 105mm !important; /* A6 width */
+    max-height: 148mm !important; /* A6 height */
+    overflow: hidden !important;
     margin: 0 !important;
   }
-  .invoice-print-area h2 { font-size: 16px !important; margin-bottom: 2px !important; }
-  .invoice-print-area h3 { font-size: 14px !important; margin-bottom: 2px !important; }
-  .invoice-print-area p, .invoice-print-area div { font-size: 10px !important; }
+  .invoice-print-area h1 { font-size: 14px !important; margin-bottom: 2px !important; margin-top: 0 !important; }
+  .invoice-print-area h2 { font-size: 12px !important; margin-bottom: 2px !important; }
+  .invoice-print-area h3, .invoice-print-area h4 { font-size: 10px !important; margin-bottom: 2px !important; margin-top: 0 !important; }
+  .invoice-print-area p, .invoice-print-area div, .invoice-print-area span { font-size: 9px !important; line-height: 1.1 !important; }
+  .invoice-print-area p { margin-bottom: 2px !important; }
+  
   .invoice-print-area th, .invoice-print-area td { 
-    padding: 4px 2px !important; 
-    font-size: 10px !important; 
+    padding: 2px 2px !important; 
+    font-size: 9px !important; 
   }
-  /* Hide unnecessary padding/margins for A6 */
-  .invoice-print-area .card-body { padding: 5px !important; }
+  
+  /* Compress specific sections */
+  .invoice-print-area img { max-height: 30px !important; margin-bottom: 4px !important; }
   .invoice-print-area table { margin-bottom: 5px !important; }
-  .invoice-print-area .header-details { margin-bottom: 10px !important; padding-bottom: 5px !important; }
+  
+  /* Decrease gap in header/footer to save space */
+  .invoice-print-area > div:first-child { padding-bottom: 4px !important; margin-bottom: 4px !important; }
+  .invoice-print-area > div:last-child { margin-top: 10px !important; padding-top: 4px !important; }
 }
 
 /* Mobile Responsiveness */
