@@ -58,7 +58,7 @@ router.get('/api/search', async (req, res) => {
   try {
     const db = getDb();
     const resDb = await db.query(`
-      SELECT id, code, name, unit_price, stock_quantity, gst_rate 
+      SELECT id, code, name, unit_price, stock_quantity, ambattur_branch_stock, parrys_branch_stock, gst_rate 
       FROM products 
       WHERE (name ILIKE $1 OR code ILIKE $2) AND is_active = 1
       LIMIT 10
@@ -166,6 +166,37 @@ router.post('/delete/:id', async (req, res) => {
     req.session.success = 'Product deleted successfully!';
   } catch (err) {
     req.session.error = 'Failed to delete product';
+  }
+  res.redirect('/products');
+});
+
+router.post('/bulk-delete', async (req, res) => {
+  let ids = req.body.product_ids;
+  if (typeof ids === 'string') ids = JSON.parse(ids);
+  if (!ids || ids.length === 0) return res.redirect('/products');
+  try {
+    const placeholders = ids.map((_, i) => '$' + (i + 1)).join(',');
+    await getDb().query('UPDATE products SET is_active = 0 WHERE id IN (' + placeholders + ')', ids);
+    req.session.success = ids.length + ' products deleted successfully!';
+  } catch (err) {
+    req.session.error = 'Failed to delete products';
+  }
+  res.redirect('/products');
+});
+
+router.post('/bulk-edit', async (req, res) => {
+  let ids = req.body.product_ids;
+  if (typeof ids === 'string') ids = JSON.parse(ids);
+  if (!ids || ids.length === 0) return res.redirect('/products');
+  const field = req.body.field;
+  let value = req.body[field];
+  if (field === 'category_id' && value === '') value = null;
+  try {
+    const placeholders = ids.map((_, i) => '$' + (i + 2)).join(',');
+    await getDb().query('UPDATE products SET ' + field + ' = $1 WHERE id IN (' + placeholders + ')', [value, ...ids]);
+    req.session.success = ids.length + ' products updated successfully!';
+  } catch (err) {
+    req.session.error = 'Failed to update products';
   }
   res.redirect('/products');
 });

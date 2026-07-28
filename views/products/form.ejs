@@ -19,11 +19,11 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="category_id">Category</label>
-            <select id="category_id" name="category_id" class="form-control">
-              <option value="">Select Category</option>
+            <label>Brand</label>
+            <select name="category_id" class="form-control">
+              <option value="">No Brand</option>
               <% categories.forEach(cat => { %>
-                <option value="<%= cat.id %>" <%= (product && product.category_id == cat.id) ? 'selected' : '' %>><%= cat.name %></option>
+                <option value="<%= cat.id %>" <%= product && product.category_id == cat.id ? 'selected' : '' %>><%= cat.name %></option>
               <% }) %>
             </select>
           </div>

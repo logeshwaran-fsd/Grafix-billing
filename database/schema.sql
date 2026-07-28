@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS products (
   unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   cost_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   stock_quantity INTEGER NOT NULL DEFAULT 0,
+  ambattur_branch_stock INTEGER DEFAULT 0,
+  parrys_branch_stock INTEGER DEFAULT 0,
   reorder_level INTEGER DEFAULT 10,
   unit TEXT DEFAULT 'pcs',
   hsn_code TEXT,
@@ -64,6 +66,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   payment_method TEXT DEFAULT 'cash',
   payment_status TEXT CHECK(payment_status IN ('paid', 'pending', 'partial', 'cancelled')) DEFAULT 'paid',
   invoice_type VARCHAR(50) DEFAULT 'gst',
+  branch VARCHAR(50),
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

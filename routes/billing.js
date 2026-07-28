@@ -118,7 +118,7 @@ router.get('/new', async (req, res) => {
 });
 
 router.post('/create', async (req, res) => {
-  const { customer_id, payment_method, payment_status, notes, items, overall_discount, invoice_type, amount_paid, apply_wallet } = req.body;
+  const { customer_id, payment_method, payment_status, notes, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet } = req.body;
   if (!items || items.length === 0) {
     return res.status(400).json({ success: false, error: 'Cannot create empty invoice' });
   }
@@ -197,9 +197,9 @@ router.post('/create', async (req, res) => {
       const final_amount_paid = amount_paid !== undefined ? parseFloat(amount_paid) : (payment_status === 'paid' ? net_payable : 0);
 
       const invoiceResult = await client.query(`
-        INSERT INTO invoices (invoice_number, customer_id, user_id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, invoice_type, amount_paid)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id
-      `, [invoice_number, customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, type, final_amount_paid]);
+        INSERT INTO invoices (invoice_number, customer_id, user_id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, invoice_type, branch, amount_paid)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
+      `, [invoice_number, customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, type, branch, final_amount_paid]);
 
       const newInvoiceId = invoiceResult.rows[0].id;
 
@@ -209,7 +209,8 @@ router.post('/create', async (req, res) => {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `, [newInvoiceId, item.product_id, item.product_name, item.product_code, item.quantity, item.unit_price, item.discount, item.tax_rate, item.tax_amount, item.total]);
         
-        await client.query('UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2', [item.quantity, item.product_id]);
+        const branchCol = branch === 'Ambattur' ? 'ambattur_branch_stock' : 'parrys_branch_stock';
+        await client.query(`UPDATE products SET stock_quantity = stock_quantity - $1, ${branchCol} = ${branchCol} - $1 WHERE id = $2`, [item.quantity, item.product_id]);
         
         await client.query(`
           INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes, user_id)
@@ -299,7 +300,7 @@ router.post('/:id/edit', async (req, res) => {
   }
 
   const invoiceId = req.params.id;
-  const { customer_id, payment_method, payment_status, notes, items, overall_discount, invoice_type, amount_paid, apply_wallet } = req.body;
+  const { customer_id, payment_method, payment_status, notes, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet } = req.body;
   if (!items || items.length === 0) return res.status(400).json({ success: false, error: 'Cannot create empty invoice' });
   
   const type = invoice_type === 'estimate' ? 'estimate' : 'gst';
@@ -322,7 +323,8 @@ router.post('/:id/edit', async (req, res) => {
       }
       
       for (const item of oldItems) {
-        await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [item.quantity, item.product_id]);
+        const oldBranchCol = oldInvoice.branch === 'Ambattur' ? 'ambattur_branch_stock' : 'parrys_branch_stock';
+        await client.query(`UPDATE products SET stock_quantity = stock_quantity + $1, ${oldBranchCol} = ${oldBranchCol} + $1 WHERE id = $2`, [item.quantity, item.product_id]);
       }
       await client.query('DELETE FROM stock_transactions WHERE reference_id = $1 AND type = $2', [invoiceId, 'sale']);
       await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [invoiceId]);
@@ -381,9 +383,9 @@ router.post('/:id/edit', async (req, res) => {
 
       // 4. APPLY new invoice
       await client.query(`
-        UPDATE invoices SET customer_id=$1, user_id=$2, subtotal=$3, tax_amount=$4, discount_amount=$5, total_amount=$6, payment_method=$7, payment_status=$8, notes=$9, invoice_type=$10, amount_paid=$11
-        WHERE id=$12
-      `, [customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, type, final_amount_paid, invoiceId]);
+        UPDATE invoices SET customer_id=$1, user_id=$2, subtotal=$3, tax_amount=$4, discount_amount=$5, total_amount=$6, payment_method=$7, payment_status=$8, notes=$9, invoice_type=$10, branch=$11, amount_paid=$12
+        WHERE id=$13
+      `, [customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, type, branch, final_amount_paid, invoiceId]);
 
       for (const item of validatedItems) {
         await client.query(`
@@ -391,7 +393,8 @@ router.post('/:id/edit', async (req, res) => {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `, [invoiceId, item.product_id, item.product_name, item.product_code, item.quantity, item.unit_price, item.discount, item.tax_rate, item.tax_amount, item.total]);
         
-        await client.query('UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2', [item.quantity, item.product_id]);
+        const newBranchCol = branch === 'Ambattur' ? 'ambattur_branch_stock' : 'parrys_branch_stock';
+        await client.query(`UPDATE products SET stock_quantity = stock_quantity - $1, ${newBranchCol} = ${newBranchCol} - $1 WHERE id = $2`, [item.quantity, item.product_id]);
         
         await client.query(`
           INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes, user_id)
@@ -469,7 +472,7 @@ router.post('/:id/cancel', async (req, res) => {
   const db = getDb();
   try {
     await db.transaction(async (client) => {
-      const invRes = await client.query('SELECT id, payment_status, customer_id, total_amount FROM invoices WHERE id = $1', [req.params.id]);
+      const invRes = await client.query('SELECT id, payment_status, customer_id, total_amount, branch FROM invoices WHERE id = $1', [req.params.id]);
       const inv = invRes.rows[0];
       if (!inv || inv.payment_status === 'cancelled') return;
       
@@ -477,7 +480,8 @@ router.post('/:id/cancel', async (req, res) => {
       const items = itemsRes.rows;
       
       for (const item of items) {
-        await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [item.quantity, item.product_id]);
+        const branchCol = inv.branch === 'Ambattur' ? 'ambattur_branch_stock' : 'parrys_branch_stock';
+        await client.query(`UPDATE products SET stock_quantity = stock_quantity + $1, ${branchCol} = ${branchCol} + $1 WHERE id = $2`, [item.quantity, item.product_id]);
         await client.query(`
           INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes, user_id)
           VALUES ($1, 'return', $2, $3, 'Cancelled Invoice', $4)

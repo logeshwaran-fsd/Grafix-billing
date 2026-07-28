@@ -8,7 +8,7 @@
       <form action="/products" method="GET" class="form-inline flex-grow-1" style="max-width:600px;">
         <input type="text" name="search" class="form-control" placeholder="Search code, name..." value="<%= search %>" style="max-width:200px;">
         <select name="category" class="form-control" style="max-width:200px;">
-          <option value="">All Categories</option>
+          <option value="">All Brands</option>
           <% categories.forEach(cat => { %>
             <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
           <% }) %>
@@ -18,7 +18,11 @@
           <a href="/products" class="btn btn-secondary">Clear</a>
         <% } %>
       </form>
-      <a href="/products/add" class="btn btn-primary">+ Add Product</a>
+      <div class="btn-group">
+        <button type="button" class="btn btn-secondary" id="btn-bulk-edit" disabled onclick="openBulkEditModal()">Edit Selected</button>
+        <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDelete()">Delete Selected</button>
+        <a href="/products/add" class="btn btn-primary">+ Add Product</a>
+      </div>
     </div>
 
     <div class="card">
@@ -26,12 +30,15 @@
         <table>
           <thead>
             <tr>
+              <th style="width:40px;"><input type="checkbox" id="check-all" onclick="toggleAllChecks(this)"></th>
               <th>Code</th>
               <th>Name</th>
-              <th>Category</th>
+              <th>Brand</th>
               <th class="text-right">Unit Price</th>
               <th class="text-right">Cost Price</th>
-              <th>Stock</th>
+              <th>Ambattur</th>
+              <th>Parrys</th>
+              <th>Total Stock</th>
               <th>Reorder</th>
               <th>Unit</th>
               <th>GST</th>
@@ -40,15 +47,18 @@
           </thead>
           <tbody>
             <% if (products.length === 0) { %>
-              <tr><td colspan="10" class="table-empty">No products found</td></tr>
+              <tr><td colspan="13" class="table-empty">No products found</td></tr>
             <% } %>
             <% products.forEach(prod => { %>
               <tr>
+                <td><input type="checkbox" class="product-check" value="<%= prod.id %>" onclick="updateBulkButtons()"></td>
                 <td><span class="badge badge-default"><%= prod.code %></span></td>
                 <td class="fw-bold"><%= prod.name %></td>
-                <td><%= prod.category_name || 'Uncategorized' %></td>
+                <td><%= prod.category_name || 'Unbranded' %></td>
                 <td class="text-right">₹<%= prod.unit_price.toFixed(2) %></td>
                 <td class="text-right text-muted">₹<%= prod.cost_price.toFixed(2) %></td>
+                <td><span class="badge badge-default"><%= prod.ambattur_branch_stock || 0 %></span></td>
+                <td><span class="badge badge-default"><%= prod.parrys_branch_stock || 0 %></span></td>
                 <td>
                   <% if (prod.stock_quantity <= 0) { %>
                     <span class="badge badge-danger">Out of Stock (0)</span>
@@ -101,4 +111,50 @@
     </div>
   </div>
 </div>
+
+<!-- Bulk Edit Modal -->
+<div id="bulk-edit-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center;">
+  <div class="modal-content" style="background:var(--bg-card); padding:24px; border-radius:8px; width:100%; max-width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border:1px solid var(--border);">
+    <h3 style="margin-top:0; color:var(--text-primary);">Bulk Edit Products</h3>
+    <form id="bulk-edit-form" method="POST" action="/products/bulk-edit">
+      <input type="hidden" name="product_ids" id="bulk-edit-ids">
+      
+      <div class="form-group">
+        <label>Field to Update</label>
+        <select class="form-control" name="field" id="bulk-edit-field" onchange="toggleBulkEditInputs()">
+          <option value="category_id">Brand</option>
+          <option value="gst_rate">GST %</option>
+          <option value="unit">Unit</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="bulk-val-brand">
+        <label>New Brand</label>
+        <select class="form-control" name="category_id">
+          <option value="">Unbranded</option>
+          <% categories.forEach(cat => { %>
+            <option value="<%= cat.id %>"><%= cat.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group" id="bulk-val-gst" style="display:none;">
+        <label>New GST %</label>
+        <input type="number" name="gst_rate" class="form-control" value="18">
+      </div>
+      
+      <div class="form-group" id="bulk-val-unit" style="display:none;">
+        <label>New Unit</label>
+        <input type="text" name="unit" class="form-control" value="pcs">
+      </div>
+
+      <div class="d-flex justify-between mt-4">
+        <button type="button" class="btn btn-secondary" onclick="closeBulkEditModal()">Cancel</button>
+        <button type="submit" class="btn btn-success">Update All</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/products.js"></script>
 <%- include('../partials/footer') %>

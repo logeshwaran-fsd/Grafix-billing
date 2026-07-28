@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="dropdown-item-code">${p.code}</span>
             <span class="dropdown-item-name">${p.name}</span>
             <span class="dropdown-item-price">₹${p.unit_price}</span>
-            <span class="dropdown-item-stock">Stock: ${p.stock_quantity}</span>
+            <span class="dropdown-item-stock">Stock: Ambattur (${p.ambattur_branch_stock || 0}) | Parrys (${p.parrys_branch_stock || 0})</span>
           </div>
         `).join('');
         prodDropdown.style.display = 'block';
@@ -156,7 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('payment-status').value = CLONE_DATA.payment_status || 'paid';
     document.getElementById('invoice-notes').value = CLONE_DATA.notes || '';
     document.getElementById('overall-discount').value = CLONE_DATA.discount || 0;
-    document.getElementById('invoice-type').value = CLONE_DATA.invoice_type || 'gst';
+    document.getElementById('invoice-type').value = CLONE_DATA.invoice_type || 'estimate';
+    if (CLONE_DATA.branch) document.getElementById('branch-select').value = CLONE_DATA.branch;
     
     invoiceItems = CLONE_DATA.items;
     renderItems();
@@ -211,7 +212,10 @@ async function addItem(p) {
   document.getElementById('product-search').value = '';
   document.getElementById('product-dropdown').style.display = 'none';
 
-  if (p.stock_quantity <= 0) {
+  const selectedBranch = document.getElementById('branch-select').value;
+  const branchStock = selectedBranch === 'Ambattur' ? (p.ambattur_branch_stock || 0) : (p.parrys_branch_stock || 0);
+
+  if (branchStock <= 0) {
     pendingProductToAdd = p;
     document.getElementById('quick-stock-product-name').textContent = p.name;
     document.getElementById('quick-stock-product-id').value = p.id;
@@ -240,8 +244,8 @@ async function addItem(p) {
 
   const existing = invoiceItems.find(item => item.product_id === p.id);
   if (existing) {
-    if (existing.quantity >= p.stock_quantity) {
-      alert('Cannot add more than available stock!');
+    if (existing.quantity >= branchStock) {
+      alert('Cannot add more than available stock at ' + selectedBranch + ' branch!');
       return;
     }
     existing.quantity += 1;
@@ -256,7 +260,8 @@ async function addItem(p) {
       discount: 0,
       original_tax_rate: p.gst_rate || 18,
       tax_rate: isEstimate ? 0 : (p.gst_rate || 18),
-      stock_quantity: p.stock_quantity
+      stock_quantity: branchStock,
+      total_stock: p.stock_quantity
     });
   }
   renderItems();
@@ -279,6 +284,12 @@ function onInvoiceTypeChange() {
   });
   
   renderItems();
+}
+
+function onBranchChange() {
+  invoiceItems = [];
+  renderItems();
+  alert('Branch changed. All selected items have been cleared.');
 }
 
 function renderItems() {
@@ -487,6 +498,7 @@ async function submitInvoice() {
     notes: document.getElementById('invoice-notes').value,
     overall_discount: parseFloat(document.getElementById('overall-discount').value) || 0,
     invoice_type: document.getElementById('invoice-type').value,
+    branch: document.getElementById('branch-select').value,
     amount_paid: parseFloat(document.getElementById('amount-paid').value) || 0,
     apply_wallet: document.getElementById('apply-wallet') ? document.getElementById('apply-wallet').checked : false,
     items: invoiceItems
