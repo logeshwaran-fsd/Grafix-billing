@@ -97,17 +97,22 @@
       <div style="display:flex; justify-content:space-between;">
         <div style="max-width:350px; font-size:13px; color:#64748b;">
           <p style="margin-bottom:8px;"><strong>Payment Method:</strong> <span style="text-transform:uppercase;"><%= invoice.payment_method %></span></p>
-          <% if (invoice.notes) { %><p><strong>Notes:</strong> <%= invoice.notes %></p><% } %>
         </div>
         <div style="min-width:240px; font-size:14px;">
           <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
             <span>Subtotal:</span>
             <span>₹<%= invoice.subtotal.toFixed(2) %></span>
           </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; <%= isEst ? 'border-bottom:1px solid #e2e8f0; padding-bottom:8px;' : '' %>">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; <%= (isEst && (!invoice.courier_charges || invoice.courier_charges == 0)) ? 'border-bottom:1px solid #e2e8f0; padding-bottom:8px;' : '' %>">
             <span>Discount:</span>
             <span>- ₹<%= invoice.discount_amount.toFixed(2) %></span>
           </div>
+          <% if (invoice.courier_charges > 0) { %>
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; <%= isEst ? 'border-bottom:1px solid #e2e8f0; padding-bottom:8px;' : '' %>">
+              <span>Courier Charges:</span>
+              <span>₹<%= parseFloat(invoice.courier_charges).toFixed(2) %></span>
+            </div>
+          <% } %>
           <% if (!isEst) { %>
             <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
               <span>GST Tax:</span>

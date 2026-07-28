@@ -134,6 +134,12 @@
             <td class="text-right">-<%= invoice.discount_amount.toFixed(2) %></td>
           </tr>
         <% } %>
+        <% if (invoice.courier_charges > 0) { %>
+          <tr>
+            <td>Courier Charges:</td>
+            <td class="text-right"><%= parseFloat(invoice.courier_charges).toFixed(2) %></td>
+          </tr>
+        <% } %>
         <% if (invoice.invoice_type !== 'estimate') { %>
           <tr>
             <td>Tax (GST):</td>

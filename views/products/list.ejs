@@ -36,8 +36,9 @@
               <th>Brand</th>
               <th class="text-right">Unit Price</th>
               <th class="text-right">Cost Price</th>
-              <th>Ambattur</th>
-              <th>Parrys</th>
+              <% branches.forEach(b => { %>
+                <th><%= b.name %></th>
+              <% }) %>
               <th>Total Stock</th>
               <th>Reorder</th>
               <th>Unit</th>
@@ -57,8 +58,14 @@
                 <td><%= prod.category_name || 'Unbranded' %></td>
                 <td class="text-right">₹<%= prod.unit_price.toFixed(2) %></td>
                 <td class="text-right text-muted">₹<%= prod.cost_price.toFixed(2) %></td>
-                <td><span class="badge badge-default"><%= prod.ambattur_branch_stock || 0 %></span></td>
-                <td><span class="badge badge-default"><%= prod.parrys_branch_stock || 0 %></span></td>
+                <% branches.forEach(b => { 
+                     let branchStock = 0;
+                     if (prod.branch_stocks && prod.branch_stocks[b.name] !== undefined) {
+                         branchStock = prod.branch_stocks[b.name];
+                     }
+                %>
+                <td><span class="badge badge-default"><%= branchStock %></span></td>
+                <% }) %>
                 <td>
                   <% if (prod.stock_quantity <= 0) { %>
                     <span class="badge badge-danger">Out of Stock (0)</span>

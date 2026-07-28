@@ -159,7 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById('payment-method').value = CLONE_DATA.payment_method || 'cash';
     document.getElementById('payment-status').value = CLONE_DATA.payment_status || 'paid';
-    document.getElementById('invoice-notes').value = CLONE_DATA.notes || '';
+    if (document.getElementById('courier-charges')) {
+      document.getElementById('courier-charges').value = CLONE_DATA.courier_charges || 0;
+    }
     document.getElementById('overall-discount').value = CLONE_DATA.discount || 0;
     document.getElementById('invoice-type').value = CLONE_DATA.invoice_type || 'estimate';
     if (CLONE_DATA.branch) document.getElementById('branch-select').value = CLONE_DATA.branch;
@@ -175,8 +177,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('payment-status').focus();
       } else if (document.activeElement.id === 'payment-status') {
         e.preventDefault();
-        document.getElementById('invoice-notes').focus();
-      } else if (document.activeElement.id === 'invoice-notes') {
+        const cc = document.getElementById('courier-charges');
+        if (cc) cc.focus();
+        else document.getElementById('submit-invoice-btn').focus();
+      } else if (document.activeElement.id === 'courier-charges') {
         e.preventDefault();
         document.getElementById('submit-invoice-btn').focus();
       }
@@ -412,6 +416,9 @@ function calculateTotals() {
   let subtotal = 0;
   let tax = 0;
   let discount = parseFloat(document.getElementById('overall-discount').value) || 0;
+  let courier = 0;
+  const ccEl = document.getElementById('courier-charges');
+  if (ccEl) courier = parseFloat(ccEl.value) || 0;
 
   invoiceItems.forEach(item => {
     const lineTotal = item.quantity * item.unit_price;
@@ -420,7 +427,7 @@ function calculateTotals() {
     tax += (lineTotal - item.discount) * (item.tax_rate / 100);
   });
 
-  const grandTotal = subtotal - discount + tax;
+  const grandTotal = subtotal - discount + tax + courier;
   let netPayable = grandTotal;
   
   const applyWallet = document.getElementById('apply-wallet');
@@ -441,6 +448,8 @@ function calculateTotals() {
 
   document.getElementById('subtotal-display').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
   document.getElementById('discount-display').textContent = '₹' + discount.toLocaleString('en-IN', {minimumFractionDigits: 2});
+  const cdEl = document.getElementById('courier-display');
+  if (cdEl) cdEl.textContent = '₹' + courier.toLocaleString('en-IN', {minimumFractionDigits: 2});
   document.getElementById('grandtotal-display').textContent = '₹' + grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
   
   const netPayableDisplay = document.getElementById('netpayable-display');
@@ -500,7 +509,7 @@ async function submitInvoice() {
     customer_id: document.getElementById('customer-id').value || null,
     payment_method: document.getElementById('payment-method').value,
     payment_status: document.getElementById('payment-status').value,
-    notes: document.getElementById('invoice-notes').value,
+    courier_charges: document.getElementById('courier-charges') ? (parseFloat(document.getElementById('courier-charges').value) || 0) : 0,
     overall_discount: parseFloat(document.getElementById('overall-discount').value) || 0,
     invoice_type: document.getElementById('invoice-type').value,
     branch: document.getElementById('branch-select').value,

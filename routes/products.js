@@ -38,11 +38,15 @@ router.get('/', async (req, res) => {
     const categoriesRes = await db.query('SELECT * FROM categories');
     const categories = categoriesRes.rows;
 
+    const branchesRes = await db.query('SELECT name FROM branches ORDER BY name ASC');
+    const branches = branchesRes.rows;
+
     res.render('products/list', {
       pageTitle: 'Products',
       activePage: 'products',
       products,
       categories,
+      branches,
       search,
       selectedCategory: category,
       pagination: { page, totalPages }

@@ -95,7 +95,7 @@ router.get('/new', async (req, res) => {
         cloneData = {
           customer_id: invoice.customer_id,
           customer_name: customerName,
-          notes: invoice.notes,
+          courier_charges: invoice.courier_charges,
           discount: invoice.discount_amount,
           payment_method: invoice.payment_method,
           payment_status: invoice.payment_status,
@@ -122,7 +122,7 @@ router.get('/new', async (req, res) => {
 });
 
 router.post('/create', async (req, res) => {
-  const { customer_id, payment_method, payment_status, notes, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet } = req.body;
+  const { customer_id, payment_method, payment_status, courier_charges, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet } = req.body;
   if (!items || items.length === 0) {
     return res.status(400).json({ success: false, error: 'Cannot create empty invoice' });
   }
@@ -181,7 +181,7 @@ router.post('/create', async (req, res) => {
         });
       }
 
-      const total_amount = subtotal - discount_amount + tax_amount;
+      const total_amount = subtotal - discount_amount + tax_amount + (parseFloat(courier_charges) || 0);
       
       let net_payable = total_amount;
       let applied_wallet = 0;
@@ -201,9 +201,9 @@ router.post('/create', async (req, res) => {
       const final_amount_paid = amount_paid !== undefined ? parseFloat(amount_paid) : (payment_status === 'paid' ? net_payable : 0);
 
       const invoiceResult = await client.query(`
-        INSERT INTO invoices (invoice_number, customer_id, user_id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, invoice_type, branch, amount_paid)
+        INSERT INTO invoices (invoice_number, customer_id, user_id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, courier_charges, invoice_type, branch, amount_paid)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
-      `, [invoice_number, customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, type, branch, final_amount_paid]);
+      `, [invoice_number, customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, parseFloat(courier_charges) || 0, type, branch, final_amount_paid]);
 
       const newInvoiceId = invoiceResult.rows[0].id;
 
@@ -291,7 +291,7 @@ router.get('/:id/edit', async (req, res) => {
       customer_name: customerName,
       payment_method: invoice.payment_method,
       payment_status: invoice.payment_status,
-      notes: invoice.notes,
+      courier_charges: invoice.courier_charges,
       discount: invoice.discount_amount,
       invoice_type: invoice.invoice_type || 'gst',
       amount_paid: invoice.amount_paid,
@@ -311,7 +311,7 @@ router.post('/:id/edit', async (req, res) => {
   }
 
   const invoiceId = req.params.id;
-  const { customer_id, payment_method, payment_status, notes, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet } = req.body;
+  const { customer_id, payment_method, payment_status, courier_charges, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet } = req.body;
   if (!items || items.length === 0) return res.status(400).json({ success: false, error: 'Cannot create empty invoice' });
   
   const type = invoice_type === 'estimate' ? 'estimate' : 'gst';
@@ -379,7 +379,7 @@ router.post('/:id/edit', async (req, res) => {
         });
       }
       
-      const total_amount = subtotal - discount_amount + tax_amount;
+      const total_amount = subtotal - discount_amount + tax_amount + (parseFloat(courier_charges) || 0);
       let net_payable = total_amount;
       let applied_wallet = 0;
 
@@ -398,9 +398,9 @@ router.post('/:id/edit', async (req, res) => {
 
       // 4. APPLY new invoice
       await client.query(`
-        UPDATE invoices SET customer_id=$1, user_id=$2, subtotal=$3, tax_amount=$4, discount_amount=$5, total_amount=$6, payment_method=$7, payment_status=$8, notes=$9, invoice_type=$10, branch=$11, amount_paid=$12
+        UPDATE invoices SET customer_id=$1, user_id=$2, subtotal=$3, tax_amount=$4, discount_amount=$5, total_amount=$6, payment_method=$7, payment_status=$8, courier_charges=$9, invoice_type=$10, branch=$11, amount_paid=$12
         WHERE id=$13
-      `, [customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, notes, type, branch, final_amount_paid, invoiceId]);
+      `, [customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, parseFloat(courier_charges) || 0, type, branch, final_amount_paid, invoiceId]);
 
       for (const item of validatedItems) {
         await client.query(`
