@@ -1,12 +1,12 @@
 <%- include('../partials/head') %>
 <%- include('../partials/sidebar', { activePage: 'categories' }) %>
 <div class="main-content">
-  <%- include('../partials/header', { pageTitle: 'Categories' }) %>
+  <%- include('../partials/header', { pageTitle: 'Brands' }) %>
   <%- include('../partials/alerts') %>
   <div class="content-area">
     <div class="grid grid-3">
       <div class="card" style="grid-column: span 1;">
-        <div class="card-header"><h3 class="card-title">Add New Category</h3></div>
+        <div class="card-header"><h3 class="card-title">Add New Brand</h3></div>
         <form action="/categories/add" method="POST">
           <div class="form-group">
             <label for="name">Brand Name *</label>
@@ -14,14 +14,14 @@
           </div>
           <div class="form-group">
             <label for="description">Description</label>
-            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Category description"></textarea>
+            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Brand description"></textarea>
           </div>
-          <button type="submit" class="btn btn-primary btn-block mt-3">Add Category</button>
+          <button type="submit" class="btn btn-primary btn-block mt-3">Add Brand</button>
         </form>
       </div>
 
       <div class="card" style="grid-column: span 2;">
-        <div class="card-header"><h3 class="card-title">All Categories</h3></div>
+        <div class="card-header"><h3 class="card-title">All Brands</h3></div>
         <div class="table-container">
           <table>
             <thead>
@@ -34,7 +34,7 @@
             </thead>
             <tbody>
               <% if (categories.length === 0) { %>
-                <tr><td colspan="4" class="table-empty">No categories added yet</td></tr>
+                <tr><td colspan="4" class="table-empty">No brands added yet</td></tr>
               <% } %>
               <% categories.forEach(cat => { %>
                   <td class="fw-bold"><%= cat.name %></td>
