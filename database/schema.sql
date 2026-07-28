@@ -17,6 +17,12 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS branches (
+  id SERIAL PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
   code TEXT UNIQUE NOT NULL,
@@ -26,8 +32,7 @@ CREATE TABLE IF NOT EXISTS products (
   unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   cost_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   stock_quantity INTEGER NOT NULL DEFAULT 0,
-  ambattur_branch_stock INTEGER DEFAULT 0,
-  parrys_branch_stock INTEGER DEFAULT 0,
+  branch_stocks JSONB DEFAULT '{}'::jsonb,
   reorder_level INTEGER DEFAULT 10,
   unit TEXT DEFAULT 'pcs',
   hsn_code TEXT,

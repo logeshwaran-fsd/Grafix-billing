@@ -1,0 +1,45 @@
+<%-- views/branches/list.ejs -->
+<%- include('../partials/head') %>
+<%- include('../partials/sidebar', { activePage: 'branches' }) %>
+<div class="main-content">
+  <%- include('../partials/header', { pageTitle: 'Manage Branches' }) %>
+  <%- include('../partials/alerts') %>
+  <div class="content-area">
+    <div class="card" style="max-width:600px; margin:0 auto;">
+      <div class="card-header d-flex justify-between align-center">
+        <h3 class="card-title">Branches</h3>
+      </div>
+      <div class="card-body">
+        <form action="/branches/add" method="POST" class="form-inline mb-4">
+          <input type="text" name="name" class="form-control" placeholder="New Branch Name (e.g. Anna Nagar)" required style="flex-grow:1; margin-right:10px;">
+          <button type="submit" class="btn btn-primary">Add Branch</button>
+        </form>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Branch Name</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (branches.length === 0) { %>
+              <tr><td colspan="2" class="table-empty">No branches found</td></tr>
+            <% } %>
+              <% branches.forEach(b => { %>
+                <tr>
+                  <td class="fw-bold"><%= b.name %></td>
+                  <td>
+                    <form action="/branches/delete/<%= b.id %>" method="POST" class="confirm-delete d-inline">
+                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

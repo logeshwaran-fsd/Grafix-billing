@@ -47,8 +47,13 @@
           <div class="form-group">
             <label for="branch-select" class="fw-bold" style="color:var(--accent);">Branch</label>
             <select id="branch-select" class="form-control" onchange="onBranchChange()">
-              <option value="Ambattur">Ambattur</option>
-              <option value="Parrys">Parrys</option>
+              <% if (typeof branches !== 'undefined' && branches.length > 0) { %>
+                <% branches.forEach(b => { %>
+                  <option value="<%= b %>"><%= b %></option>
+                <% }) %>
+              <% } else { %>
+                <option value="">No Branches Available</option>
+              <% } %>
             </select>
           </div>
           

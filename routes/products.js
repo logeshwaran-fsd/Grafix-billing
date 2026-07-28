@@ -58,7 +58,7 @@ router.get('/api/search', async (req, res) => {
   try {
     const db = getDb();
     const resDb = await db.query(`
-      SELECT id, code, name, unit_price, stock_quantity, ambattur_branch_stock, parrys_branch_stock, gst_rate 
+      SELECT id, code, name, unit_price, stock_quantity, branch_stocks, gst_rate 
       FROM products 
       WHERE (name ILIKE $1 OR code ILIKE $2) AND is_active = 1
       LIMIT 10
@@ -90,21 +90,31 @@ router.get('/api/history/:id', async (req, res) => {
 
 router.get('/add', async (req, res) => {
   try {
-    const resDb = await getDb().query('SELECT * FROM categories');
-    res.render('products/form', { pageTitle: 'Add Product', activePage: 'products', product: null, categories: resDb.rows });
+    const categoriesRes = await getDb().query('SELECT * FROM categories');
+    const branchesRes = await getDb().query('SELECT * FROM branches ORDER BY name ASC');
+    res.render('products/form', { pageTitle: 'Add Product', activePage: 'products', product: null, categories: categoriesRes.rows, branches: branchesRes.rows });
   } catch (err) {
     res.redirect('/products');
   }
 });
 
 router.post('/add', async (req, res) => {
-  const { code, name, category_id, unit_price, cost_price, stock_quantity, reorder_level, unit, hsn_code, gst_rate, description } = req.body;
+  const { code, name, category_id, unit_price, cost_price, reorder_level, unit, hsn_code, gst_rate, description } = req.body;
   try {
     const db = getDb();
+    const branchesRes = await db.query('SELECT name FROM branches');
+    const branch_stocks = {};
+    let total_stock = 0;
+    for (const b of branchesRes.rows) {
+      const stock = parseInt(req.body[`branch_${b.name}`]) || 0;
+      branch_stocks[b.name] = stock;
+      total_stock += stock;
+    }
+
     await db.query(`
-      INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, reorder_level, unit, hsn_code, gst_rate, description) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-    `, [code, name, category_id || null, unit_price, cost_price, stock_quantity, reorder_level, unit, hsn_code, gst_rate, description]);
+      INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `, [code, name, category_id || null, unit_price, cost_price, total_stock, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description]);
     req.session.success = 'Product added successfully!';
     res.redirect('/products');
   } catch (err) {
@@ -135,8 +145,9 @@ router.get('/edit/:id', async (req, res) => {
     const db = getDb();
     const productRes = await db.query('SELECT * FROM products WHERE id = $1', [req.params.id]);
     const categoriesRes = await db.query('SELECT * FROM categories');
+    const branchesRes = await db.query('SELECT * FROM branches ORDER BY name ASC');
     if (productRes.rows.length === 0) return res.redirect('/products');
-    res.render('products/form', { pageTitle: 'Edit Product', activePage: 'products', product: productRes.rows[0], categories: categoriesRes.rows });
+    res.render('products/form', { pageTitle: 'Edit Product', activePage: 'products', product: productRes.rows[0], categories: categoriesRes.rows, branches: branchesRes.rows });
   } catch (err) {
     res.redirect('/products');
   }
@@ -146,11 +157,20 @@ router.post('/edit/:id', async (req, res) => {
   const { code, name, category_id, unit_price, cost_price, reorder_level, unit, hsn_code, gst_rate, description } = req.body;
   try {
     const db = getDb();
+    const branchesRes = await db.query('SELECT name FROM branches');
+    const branch_stocks = {};
+    let total_stock = 0;
+    for (const b of branchesRes.rows) {
+      const stock = parseInt(req.body[`branch_${b.name}`]) || 0;
+      branch_stocks[b.name] = stock;
+      total_stock += stock;
+    }
+
     await db.query(`
       UPDATE products 
-      SET code = $1, name = $2, category_id = $3, unit_price = $4, cost_price = $5, reorder_level = $6, unit = $7, hsn_code = $8, gst_rate = $9, description = $10, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $11
-    `, [code, name, category_id || null, unit_price, cost_price, reorder_level, unit, hsn_code, gst_rate, description, req.params.id]);
+      SET code = $1, name = $2, category_id = $3, unit_price = $4, cost_price = $5, stock_quantity = $6, branch_stocks = $7, reorder_level = $8, unit = $9, hsn_code = $10, gst_rate = $11, description = $12, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $13
+    `, [code, name, category_id || null, unit_price, cost_price, total_stock, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description, req.params.id]);
     req.session.success = 'Product updated successfully!';
     res.redirect('/products');
   } catch (err) {

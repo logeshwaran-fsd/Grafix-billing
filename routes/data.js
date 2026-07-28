@@ -81,27 +81,39 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     await client.query('BEGIN');
     
     const query = `
-      INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, ambattur_branch_stock, parrys_branch_stock, reorder_level, unit, gst_rate, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)
+      INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1)
       ON CONFLICT (code) DO UPDATE SET
         name = EXCLUDED.name,
         unit_price = EXCLUDED.unit_price,
         cost_price = EXCLUDED.cost_price,
         stock_quantity = EXCLUDED.stock_quantity,
-        ambattur_branch_stock = EXCLUDED.ambattur_branch_stock,
-        parrys_branch_stock = EXCLUDED.parrys_branch_stock,
+        branch_stocks = EXCLUDED.branch_stocks,
         reorder_level = EXCLUDED.reorder_level,
         unit = EXCLUDED.unit,
         gst_rate = EXCLUDED.gst_rate,
         is_active = 1
     `;
     
+    const branchesRes = await client.query('SELECT name FROM branches');
+    const branches = branchesRes.rows.map(b => b.name);
+
     for (const row of sheetData) {
       if (!row.code || !row.name) continue;
       
-      const ambattur = parseInt(row.ambattur) || 0;
-      const parrys = parseInt(row.paris) || parseInt(row.parrys) || 0;
-      const totalStock = (parseInt(row.stock_quantity) || 0) + ambattur + parrys;
+      const branch_stocks = {};
+      // Base stock quantity (if specified)
+      let baseStock = parseInt(row.stock_quantity) || 0;
+      let branchSum = 0;
+      
+      for (const branch of branches) {
+         const key = Object.keys(row).find(k => k.toLowerCase().trim() === branch.toLowerCase() || (branch.toLowerCase() === 'parrys' && k.toLowerCase().trim() === 'paris'));
+         const stock = key ? (parseInt(row[key]) || 0) : 0;
+         branch_stocks[branch] = stock;
+         branchSum += stock;
+      }
+      
+      const totalStock = baseStock + branchSum;
       
       await client.query(query, [
         row.code.toString(),
@@ -109,8 +121,7 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
         parseFloat(row.unit_price) || 0,
         parseFloat(row.cost_price) || 0,
         totalStock,
-        ambattur,
-        parrys,
+        branch_stocks,
         parseInt(row.reorder_level) || 10,
         row.unit || 'pcs',
         parseFloat(row.gst_rate) || 18

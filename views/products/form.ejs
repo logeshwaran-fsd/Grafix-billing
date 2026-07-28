@@ -49,15 +49,29 @@
         </div>
 
         <div class="form-row">
-          <div class="form-group">
-            <% if (!product) { %>
-              <label for="stock_quantity">Initial Stock Quantity *</label>
-              <input type="number" id="stock_quantity" name="stock_quantity" class="form-control" value="0" required>
-            <% } else { %>
-              <label>Current Stock (Update via Stock Adjustment)</label>
-              <input type="text" class="form-control" value="<%= product.stock_quantity %>" disabled>
-            <% } %>
+          <div class="form-group" style="flex: 2;">
+            <label>Branch Stocks *</label>
+            <div class="d-flex" style="gap: 10px; flex-wrap: wrap;">
+              <% branches.forEach(b => { 
+                  let currentStock = 0;
+                  if (product && product.branch_stocks && product.branch_stocks[b.name] !== undefined) {
+                      currentStock = product.branch_stocks[b.name];
+                  }
+              %>
+                <div style="flex: 1; min-width: 120px;">
+                  <label style="font-size: 0.85em; color: var(--text-light);"><%= b.name %></label>
+                  <input type="number" name="branch_<%= b.name %>" class="form-control branch-stock-input" value="<%= currentStock %>" required>
+                </div>
+              <% }) %>
+            </div>
           </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Total Stock</label>
+            <input type="number" id="stock_quantity" class="form-control" value="<%= product ? product.stock_quantity : 0 %>" disabled style="background-color: #f1f3f5; font-weight: bold;">
+          </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="reorder_level">Reorder (Low Stock) Level</label>
             <input type="number" id="reorder_level" name="reorder_level" class="form-control" value="<%= product ? product.reorder_level : 10 %>">
@@ -92,4 +106,16 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.querySelectorAll('.branch-stock-input').forEach(input => {
+    input.addEventListener('input', () => {
+      let total = 0;
+      document.querySelectorAll('.branch-stock-input').forEach(inp => {
+        total += parseInt(inp.value) || 0;
+      });
+      document.getElementById('stock_quantity').value = total;
+    });
+  });
+</script>
 <%- include('../partials/footer') %>

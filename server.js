@@ -36,6 +36,7 @@ app.use(attachLocals);
 app.use('/dashboard', require('./routes/dashboard'));
 app.use('/products', require('./routes/products'));
 app.use('/categories', require('./routes/categories'));
+app.use('/branches', require('./routes/branches'));
 app.use('/customers', require('./routes/customers'));
 app.use('/billing', require('./routes/billing'));
 app.use('/inventory', require('./routes/inventory'));

@@ -76,9 +76,12 @@ router.get('/', async (req, res) => {
 router.get('/new', async (req, res) => {
   const cloneId = req.query.clone;
   let cloneData = null;
-  if (cloneId) {
-    try {
-      const db = getDb();
+  const db = getDb();
+  try {
+    const branchesRes = await db.query('SELECT name FROM branches ORDER BY name ASC');
+    const branches = branchesRes.rows.map(b => b.name);
+    
+    if (cloneId) {
       const invoiceRes = await db.query('SELECT * FROM invoices WHERE id = $1', [cloneId]);
       const invoice = invoiceRes.rows[0];
       if (invoice) {
@@ -109,12 +112,12 @@ router.get('/new', async (req, res) => {
             stock_quantity: 999999
           }))
         };
-      }
-    } catch (err) {
-      console.error(err);
     }
+    res.render('billing/new', { pageTitle: 'New Invoice', activePage: 'billing-new', cloneData, branches });
+  } catch (err) {
+    console.error(err);
+    res.redirect('/billing');
   }
-  res.render('billing/new', { pageTitle: 'New Invoice', activePage: 'billing-new', cloneData });
 });
 
 router.post('/create', async (req, res) => {
@@ -209,8 +212,12 @@ router.post('/create', async (req, res) => {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `, [newInvoiceId, item.product_id, item.product_name, item.product_code, item.quantity, item.unit_price, item.discount, item.tax_rate, item.tax_amount, item.total]);
         
-        const branchCol = branch === 'Ambattur' ? 'ambattur_branch_stock' : 'parrys_branch_stock';
-        await client.query(`UPDATE products SET stock_quantity = stock_quantity - $1, ${branchCol} = ${branchCol} - $1 WHERE id = $2`, [item.quantity, item.product_id]);
+        await client.query(`
+          UPDATE products 
+          SET stock_quantity = stock_quantity - $1,
+              branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) - $1)::text::jsonb)
+          WHERE id = $3
+        `, [item.quantity, branch, item.product_id]);
         
         await client.query(`
           INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes, user_id)
@@ -244,6 +251,9 @@ router.get('/:id/edit', async (req, res) => {
   }
   try {
     const db = getDb();
+    const branchesRes = await db.query('SELECT name FROM branches ORDER BY name ASC');
+    const branches = branchesRes.rows.map(b => b.name);
+    
     const invRes = await db.query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
     const invoice = invRes.rows[0];
     if (!invoice) return res.redirect('/billing');
@@ -287,7 +297,7 @@ router.get('/:id/edit', async (req, res) => {
       items: processedItems
     };
     
-    res.render('billing/new', { pageTitle: 'Edit Invoice ' + invoice.invoice_number, activePage: 'billing', cloneData, editInvoiceId: invoice.id });
+    res.render('billing/new', { pageTitle: 'Edit Invoice ' + invoice.invoice_number, activePage: 'billing', cloneData, editInvoiceId: invoice.id, branches });
   } catch (err) {
     console.error(err);
     res.redirect('/billing');
@@ -323,8 +333,12 @@ router.post('/:id/edit', async (req, res) => {
       }
       
       for (const item of oldItems) {
-        const oldBranchCol = oldInvoice.branch === 'Ambattur' ? 'ambattur_branch_stock' : 'parrys_branch_stock';
-        await client.query(`UPDATE products SET stock_quantity = stock_quantity + $1, ${oldBranchCol} = ${oldBranchCol} + $1 WHERE id = $2`, [item.quantity, item.product_id]);
+        await client.query(`
+          UPDATE products 
+          SET stock_quantity = stock_quantity + $1,
+              branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) + $1)::text::jsonb)
+          WHERE id = $3
+        `, [item.quantity, oldInvoice.branch, item.product_id]);
       }
       await client.query('DELETE FROM stock_transactions WHERE reference_id = $1 AND type = $2', [invoiceId, 'sale']);
       await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [invoiceId]);
@@ -393,8 +407,12 @@ router.post('/:id/edit', async (req, res) => {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `, [invoiceId, item.product_id, item.product_name, item.product_code, item.quantity, item.unit_price, item.discount, item.tax_rate, item.tax_amount, item.total]);
         
-        const newBranchCol = branch === 'Ambattur' ? 'ambattur_branch_stock' : 'parrys_branch_stock';
-        await client.query(`UPDATE products SET stock_quantity = stock_quantity - $1, ${newBranchCol} = ${newBranchCol} - $1 WHERE id = $2`, [item.quantity, item.product_id]);
+        await client.query(`
+          UPDATE products 
+          SET stock_quantity = stock_quantity - $1,
+              branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) - $1)::text::jsonb)
+          WHERE id = $3
+        `, [item.quantity, branch, item.product_id]);
         
         await client.query(`
           INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes, user_id)
@@ -480,8 +498,12 @@ router.post('/:id/cancel', async (req, res) => {
       const items = itemsRes.rows;
       
       for (const item of items) {
-        const branchCol = inv.branch === 'Ambattur' ? 'ambattur_branch_stock' : 'parrys_branch_stock';
-        await client.query(`UPDATE products SET stock_quantity = stock_quantity + $1, ${branchCol} = ${branchCol} + $1 WHERE id = $2`, [item.quantity, item.product_id]);
+        await client.query(`
+          UPDATE products 
+          SET stock_quantity = stock_quantity + $1,
+              branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) + $1)::text::jsonb)
+          WHERE id = $3
+        `, [item.quantity, inv.branch, item.product_id]);
         await client.query(`
           INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes, user_id)
           VALUES ($1, 'return', $2, $3, 'Cancelled Invoice', $4)

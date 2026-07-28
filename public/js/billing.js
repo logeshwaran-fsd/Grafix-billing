@@ -60,14 +60,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(`/products/api/search?q=${encodeURIComponent(q)}`);
       const products = await res.json();
       if (products.length > 0) {
-        prodDropdown.innerHTML = products.map(p => `
+        prodDropdown.innerHTML = products.map(p => {
+          let stocksText = '';
+          if (p.branch_stocks) {
+            stocksText = Object.entries(p.branch_stocks).map(([b, s]) => `${b} (${s})`).join(' | ');
+          }
+          return `
           <div class="dropdown-item" onclick="addItem(${JSON.stringify(p).replace(/"/g, '&quot;')})">
             <span class="dropdown-item-code">${p.code}</span>
             <span class="dropdown-item-name">${p.name}</span>
             <span class="dropdown-item-price">₹${p.unit_price}</span>
-            <span class="dropdown-item-stock">Stock: Ambattur (${p.ambattur_branch_stock || 0}) | Parrys (${p.parrys_branch_stock || 0})</span>
+            <span class="dropdown-item-stock">Stock: ${stocksText}</span>
           </div>
-        `).join('');
+        `}).join('');
         prodDropdown.style.display = 'block';
       } else {
         prodDropdown.innerHTML = '<div class="dropdown-item">No products found</div>';
@@ -213,7 +218,7 @@ async function addItem(p) {
   document.getElementById('product-dropdown').style.display = 'none';
 
   const selectedBranch = document.getElementById('branch-select').value;
-  const branchStock = selectedBranch === 'Ambattur' ? (p.ambattur_branch_stock || 0) : (p.parrys_branch_stock || 0);
+  const branchStock = (p.branch_stocks && p.branch_stocks[selectedBranch]) ? parseInt(p.branch_stocks[selectedBranch]) : 0;
 
   if (branchStock <= 0) {
     pendingProductToAdd = p;
