@@ -90,7 +90,7 @@ router.post('/adjust/:id', async (req, res) => {
 });
 
 router.post('/api/adjust/:id', async (req, res) => {
-  const { type, quantity, notes } = req.body;
+  const { type, quantity, notes, branch } = req.body;
   const qty = parseInt(quantity);
   if (!qty || qty <= 0) {
     return res.status(400).json({ success: false, error: 'Invalid quantity!' });
@@ -103,14 +103,28 @@ router.post('/api/adjust/:id', async (req, res) => {
     await client.query('BEGIN');
     
     const change = type === 'purchase' || type === 'return' ? qty : -qty;
-    await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [change, req.params.id]);
+    
+    if (branch) {
+      await client.query(`
+        UPDATE products 
+        SET stock_quantity = stock_quantity + $1,
+            branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) + $1)::text::jsonb)
+        WHERE id = $3
+      `, [change, branch, req.params.id]);
+    } else {
+      await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [change, req.params.id]);
+    }
     await client.query(`
       INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
       VALUES ($1, $2, $3, $4, $5)
     `, [req.params.id, type, change, notes || 'Quick adjustment', req.session.user.id]);
     
-    const newStockRes = await client.query('SELECT stock_quantity FROM products WHERE id = $1', [req.params.id]);
-    const newStock = newStockRes.rows[0].stock_quantity;
+    const newStockRes = await client.query('SELECT stock_quantity, branch_stocks FROM products WHERE id = $1', [req.params.id]);
+    const newStockTotal = newStockRes.rows[0].stock_quantity;
+    const newBranchStocks = newStockRes.rows[0].branch_stocks;
+    
+    // For UI update, if a branch was specified, we can return the updated branch stock
+    const newStock = branch && newBranchStocks && newBranchStocks[branch] !== undefined ? newBranchStocks[branch] : newStockTotal;
     
     await client.query('COMMIT');
     res.json({ success: true, newStock });

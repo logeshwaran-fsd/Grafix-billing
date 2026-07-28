@@ -563,7 +563,8 @@ async function submitQuickStock() {
       body: JSON.stringify({
         type: 'purchase',
         quantity: qty,
-        notes: 'Quick adjust during billing'
+        notes: 'Quick adjust during billing',
+        branch: document.getElementById('branch-select').value
       })
     });
     const result = await res.json();
