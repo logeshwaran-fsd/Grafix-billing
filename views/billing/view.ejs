@@ -23,7 +23,7 @@
         <a href="/billing/<%= invoice.id %>/edit" class="btn btn-primary" style="background:#6366f1; border:none;">Edit Invoice ✏️</a>
       <% } %>
       
-      <% if (invoice.payment_status !== 'cancelled') { %>
+      <% if (invoice.payment_status !== 'cancelled' && user && user.role === 'admin') { %>
         <form action="/billing/<%= invoice.id %>/cancel" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to cancel this invoice? This will restore stock levels.')">
           <button type="submit" class="btn btn-danger">Cancel Invoice</button>
         </form>

@@ -490,6 +490,11 @@ router.get('/:id/pos', async (req, res) => {
 });
 
 router.post('/:id/cancel', async (req, res) => {
+  if (req.session.user.role !== 'admin') {
+    req.session.error = 'Access Denied. Admins only.';
+    return res.redirect('/billing');
+  }
+
   const db = getDb();
   try {
     await db.transaction(async (client) => {
