@@ -5,7 +5,7 @@
   <%- include('../partials/header', { pageTitle: 'Invoice Details' }) %>
   <%- include('../partials/alerts') %>
   <div class="content-area">
-    <div class="mb-3 d-flex gap-2 no-print" style="align-items: center;">
+    <div class="mb-3 d-flex gap-2 no-print" style="align-items: center; flex-wrap: wrap;">
       <a href="/billing" class="btn btn-secondary">← Back to Invoices</a>
       
       <% if (!isEst) { %>
@@ -31,7 +31,7 @@
       
       <% if (user && user.role === 'admin') { %>
         <form action="/billing/<%= invoice.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you absolutely sure you want to DELETE this invoice entirely? This cannot be undone.')">
-          <button type="submit" class="btn btn-danger" style="background:#dc2626; border:none; margin-left: 8px;">Delete Invoice 🗑️</button>
+          <button type="submit" class="btn btn-danger" style="background:#dc2626; border:none;">Delete Invoice 🗑️</button>
         </form>
       <% } %>
     </div>
