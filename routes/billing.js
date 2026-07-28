@@ -112,6 +112,7 @@ router.get('/new', async (req, res) => {
             stock_quantity: 999999
           }))
         };
+      }
     }
     res.render('billing/new', { pageTitle: 'New Invoice', activePage: 'billing-new', cloneData, branches });
   } catch (err) {
