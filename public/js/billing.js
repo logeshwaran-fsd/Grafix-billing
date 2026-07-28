@@ -507,6 +507,7 @@ async function submitInvoice() {
 
   const data = {
     customer_id: document.getElementById('customer-id').value || null,
+    invoice_date: document.getElementById('invoice-date') ? document.getElementById('invoice-date').value : new Date().toISOString().split('T')[0],
     payment_method: document.getElementById('payment-method').value,
     payment_status: document.getElementById('payment-status').value,
     courier_charges: document.getElementById('courier-charges') ? (parseFloat(document.getElementById('courier-charges').value) || 0) : 0,

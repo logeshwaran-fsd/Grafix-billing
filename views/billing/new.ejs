@@ -63,6 +63,11 @@
               <option value="estimate" selected>Estimate / Quotation (Non-Tax)</option>
             </select>
           </div>
+          
+          <div class="form-group">
+            <label for="invoice-date" class="fw-bold" style="color:var(--accent);">Invoice Date</label>
+            <input type="date" id="invoice-date" class="form-control" value="<%= (typeof cloneData !== 'undefined' && cloneData && cloneData.date) ? cloneData.date : new Date().toISOString().split('T')[0] %>">
+          </div>
 
           <div class="form-group autocomplete-wrapper" style="position:relative;">
             <label for="customer-search">Customer Name</label>

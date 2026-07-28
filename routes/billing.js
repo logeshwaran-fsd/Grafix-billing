@@ -122,7 +122,7 @@ router.get('/new', async (req, res) => {
 });
 
 router.post('/create', async (req, res) => {
-  const { customer_id, payment_method, payment_status, courier_charges, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet } = req.body;
+  const { customer_id, payment_method, payment_status, courier_charges, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet, invoice_date } = req.body;
   if (!items || items.length === 0) {
     return res.status(400).json({ success: false, error: 'Cannot create empty invoice' });
   }
@@ -200,10 +200,11 @@ router.post('/create', async (req, res) => {
       
       const final_amount_paid = amount_paid !== undefined ? parseFloat(amount_paid) : (payment_status === 'paid' ? net_payable : 0);
 
+      const parsedDate = invoice_date ? new Date(invoice_date) : new Date();
       const invoiceResult = await client.query(`
-        INSERT INTO invoices (invoice_number, customer_id, user_id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, courier_charges, invoice_type, branch, amount_paid)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
-      `, [invoice_number, customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, parseFloat(courier_charges) || 0, type, branch, final_amount_paid]);
+        INSERT INTO invoices (invoice_number, customer_id, user_id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, courier_charges, invoice_type, branch, amount_paid, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id
+      `, [invoice_number, customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, parseFloat(courier_charges) || 0, type, branch, final_amount_paid, parsedDate]);
 
       const newInvoiceId = invoiceResult.rows[0].id;
 
@@ -311,7 +312,7 @@ router.post('/:id/edit', async (req, res) => {
   }
 
   const invoiceId = req.params.id;
-  const { customer_id, payment_method, payment_status, courier_charges, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet } = req.body;
+  const { customer_id, payment_method, payment_status, courier_charges, items, overall_discount, invoice_type, branch, amount_paid, apply_wallet, invoice_date } = req.body;
   if (!items || items.length === 0) return res.status(400).json({ success: false, error: 'Cannot create empty invoice' });
   
   const type = invoice_type === 'estimate' ? 'estimate' : 'gst';
@@ -396,11 +397,12 @@ router.post('/:id/edit', async (req, res) => {
       
       const final_amount_paid = amount_paid !== undefined ? parseFloat(amount_paid) : (payment_status === 'paid' ? net_payable : 0);
 
+      const parsedDate = invoice_date ? new Date(invoice_date) : new Date();
       // 4. APPLY new invoice
       await client.query(`
-        UPDATE invoices SET customer_id=$1, user_id=$2, subtotal=$3, tax_amount=$4, discount_amount=$5, total_amount=$6, payment_method=$7, payment_status=$8, courier_charges=$9, invoice_type=$10, branch=$11, amount_paid=$12
+        UPDATE invoices SET customer_id=$1, user_id=$2, subtotal=$3, tax_amount=$4, discount_amount=$5, total_amount=$6, payment_method=$7, payment_status=$8, courier_charges=$9, invoice_type=$10, branch=$11, amount_paid=$12, created_at=$14
         WHERE id=$13
-      `, [customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, parseFloat(courier_charges) || 0, type, branch, final_amount_paid, invoiceId]);
+      `, [customer_id || null, req.session.user.id, subtotal, tax_amount, discount_amount, total_amount, payment_method, payment_status, parseFloat(courier_charges) || 0, type, branch, final_amount_paid, invoiceId, parsedDate]);
 
       for (const item of validatedItems) {
         await client.query(`
@@ -524,6 +526,54 @@ router.post('/:id/cancel', async (req, res) => {
     req.session.error = 'Failed to cancel invoice';
   }
   res.redirect(`/billing/${req.params.id}`);
+});
+
+router.post('/:id/delete', async (req, res) => {
+  if (req.session.user.role !== 'admin') {
+    req.session.error = 'Access Denied. Admins only.';
+    return res.redirect('/billing');
+  }
+
+  const db = getDb();
+  try {
+    await db.transaction(async (client) => {
+      const invRes = await client.query('SELECT id, payment_status, customer_id, total_amount, branch FROM invoices WHERE id = $1', [req.params.id]);
+      const inv = invRes.rows[0];
+      if (!inv) throw new Error('Invoice not found');
+
+      // Only revert stock and balance if the invoice was not already cancelled
+      if (inv.payment_status !== 'cancelled') {
+        const itemsRes = await client.query('SELECT product_id, quantity FROM invoice_items WHERE invoice_id = $1', [req.params.id]);
+        const items = itemsRes.rows;
+        
+        for (const item of items) {
+          await client.query(`
+            UPDATE products 
+            SET stock_quantity = stock_quantity + $1,
+                branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) + $1)::text::jsonb)
+            WHERE id = $3
+          `, [item.quantity, inv.branch, item.product_id]);
+          // No need to insert a stock transaction if we are deleting the invoice entirely, but we could if we want a trace.
+          // Since it's a hard delete, we will delete the existing 'sale' stock_transactions related to this invoice.
+        }
+        
+        if (inv.customer_id && inv.payment_status === 'pending') {
+          await client.query('UPDATE customers SET balance = balance - $1 WHERE id = $2', [inv.total_amount, inv.customer_id]);
+        }
+      }
+
+      await client.query('DELETE FROM stock_transactions WHERE reference_id = $1 AND type = $2', [req.params.id, 'sale']);
+      await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [req.params.id]);
+      await client.query('DELETE FROM invoices WHERE id = $1', [req.params.id]);
+    });
+    
+    req.session.success = 'Invoice deleted entirely!';
+    res.redirect('/billing');
+  } catch (err) {
+    console.error(err);
+    req.session.error = 'Failed to delete invoice';
+    res.redirect(`/billing/${req.params.id}`);
+  }
 });
 
 module.exports = router;
