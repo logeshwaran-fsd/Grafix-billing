@@ -30,6 +30,7 @@
                 <tr>
                   <td class="fw-bold"><%= b.name %></td>
                   <td>
+                    <button type="button" class="btn btn-secondary btn-sm d-inline" onclick="openEditBranchModal('<%= b.id %>', '<%= b.name.replace(/'/g, "\\'") %>')">Edit</button>
                     <form action="/branches/delete/<%= b.id %>" method="POST" class="confirm-delete d-inline">
                       <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                     </form>
@@ -42,4 +43,29 @@
     </div>
   </div>
 </div>
+
+<!-- Edit Branch Modal -->
+<div id="edit-branch-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center;">
+  <div class="modal-content" style="background:var(--bg-card); padding:24px; border-radius:8px; width:100%; max-width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border:1px solid var(--border);">
+    <h3 style="margin-top:0; color:var(--text-primary);">Edit Branch</h3>
+    <form id="edit-branch-form" method="POST" action="">
+      <div class="form-group">
+        <label>Branch Name *</label>
+        <input type="text" id="edit-branch-name" name="name" class="form-control" required>
+      </div>
+      <div class="d-flex justify-between mt-4">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('edit-branch-modal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-success">Update Branch</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openEditBranchModal(id, name) {
+    document.getElementById('edit-branch-form').action = '/branches/edit/' + id;
+    document.getElementById('edit-branch-name').value = name;
+    document.getElementById('edit-branch-modal').style.display = 'flex';
+  }
+</script>
 <%- include('../partials/footer') %>
