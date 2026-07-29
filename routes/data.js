@@ -130,8 +130,11 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       let hasBranchColumns = false;
       
       for (const branch of branches) {
-         const branchKey = branch.toLowerCase();
-         const key = Object.keys(row).find(k => k === branchKey || (branchKey === 'parrys' && k === 'paris'));
+         const branchKey = branch.toLowerCase().replace(/[^a-z0-9]/g, '');
+         const key = Object.keys(row).find(k => {
+           const cleanK = k.replace(/[^a-z0-9]/g, '');
+           return cleanK.includes(branchKey) || (branchKey === 'parrys' && cleanK.includes('paris'));
+         });
          if (key !== undefined) hasBranchColumns = true;
          const stock = key ? (parseInt(row[key]) || 0) : 0;
          branch_stocks[branch] = stock;
