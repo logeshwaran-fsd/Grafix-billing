@@ -40,13 +40,21 @@
       @media print {
         @page { margin: 5px 1px 0px 1px; }
         body, .invoice-print-area { font-family: Arial, sans-serif !important; font-stretch: normal !important; margin: 0 !important; }
-        #invoice-card { padding: 0 !important; max-width: 100% !important; border: none !important; border-radius: 0 !important; font-size: 10px !important; }
+        #invoice-card { padding: 0 !important; max-width: 100% !important; border: none !important; border-radius: 0 !important; font-size: 9px !important; }
         .invoice-print-area table { margin-bottom: 12px !important; }
-        .invoice-print-area table th, .invoice-print-area table td { padding: 3px 4px !important; font-size: 9.5px !important; white-space: nowrap !important; }
+        .invoice-print-area table th, .invoice-print-area table td { padding: 3px 4px !important; font-size: 9px !important; white-space: nowrap !important; }
         .invoice-print-area table td:nth-child(2) { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
         .invoice-print-area h1 { font-size: 16px !important; margin-bottom: 2px !important; margin-top: 0 !important; }
-        .invoice-print-area p { margin-bottom: 2px !important; font-size: 9.5px !important; }
+        .invoice-print-area p { margin-bottom: 2px !important; font-size: 9px !important; }
       }
+      
+      /* Exact same styles explicitly for PDF export engine */
+      .pdf-mode { font-family: Arial, sans-serif !important; font-stretch: normal !important; margin: 0 !important; padding: 5px !important; border: none !important; border-radius: 0 !important; font-size: 9px !important; background: #fff !important; }
+      .pdf-mode table { margin-bottom: 12px !important; }
+      .pdf-mode table th, .pdf-mode table td { padding: 3px 4px !important; font-size: 9px !important; white-space: nowrap !important; }
+      .pdf-mode table td:nth-child(2) { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+      .pdf-mode h1 { font-size: 16px !important; margin-bottom: 2px !important; margin-top: 0 !important; }
+      .pdf-mode p { margin-bottom: 2px !important; font-size: 9px !important; }
     </style>
     <div class="card invoice-print-area" id="invoice-card" style="background:#fff; color:#1e293b; max-width:850px; margin: 0 auto; padding:40px; border-radius:8px; border:1px solid #e2e8f0; font-family:'Inter', sans-serif;">
       <!-- Invoice Header & Customer Details Compacted -->
@@ -165,15 +173,20 @@
 
   function downloadPDF() {
     const element = document.getElementById('invoice-card');
+    element.classList.add('pdf-mode'); // Force print-like layout
+    
     const type = document.getElementById('print-copy-type') ? document.getElementById('print-copy-type').value : 'estimate';
     const opt = {
-      margin:       10,
+      margin:       [5, 1, 0, 1], // top, left, bottom, right (in mm)
       filename:     `Invoice_<%= invoice.invoice_number %>_${type}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
+      image:        { type: 'jpeg', quality: 1 },
+      html2canvas:  { scale: 3, useCORS: true, windowWidth: 420 }, // 420px width matches typical A6 proportion
       jsPDF:        { unit: 'mm', format: 'a6', orientation: 'portrait' }
     };
-    html2pdf().from(element).set(opt).save();
+    
+    html2pdf().from(element).set(opt).save().then(() => {
+      element.classList.remove('pdf-mode'); // Restore normal screen view
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
