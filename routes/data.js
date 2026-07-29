@@ -99,28 +99,18 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     client = await db.connect();
     await client.query('BEGIN');
     
-    const query = `
-      INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1)
-      ON CONFLICT (code) DO UPDATE SET
-        name = EXCLUDED.name,
-        unit_price = EXCLUDED.unit_price,
-        cost_price = EXCLUDED.cost_price,
-        stock_quantity = EXCLUDED.stock_quantity,
-        branch_stocks = EXCLUDED.branch_stocks,
-        reorder_level = EXCLUDED.reorder_level,
-        unit = EXCLUDED.unit,
-        gst_rate = EXCLUDED.gst_rate,
-        is_active = 1
-    `;
+    let processedCount = 0;
     
     const branchesRes = await client.query('SELECT name FROM branches');
     const branches = branchesRes.rows.map(b => b.name);
-
-    let processedCount = 0;
-    let promises = [];
     
-    for (const rawRow of sheetData) {
+    // Batch process in chunks of 500 rows to avoid PostgreSQL max parameter limits
+    const BATCH_SIZE = 500;
+    let batchValues = [];
+    let batchParams = [];
+    
+    for (let i = 0; i < sheetData.length; i++) {
+      const rawRow = sheetData[i];
       const row = {};
       for (const k in rawRow) {
         row[k.toLowerCase().trim()] = rawRow[k];
@@ -150,7 +140,9 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       
       const totalStock = hasBranchColumns ? branchSum : baseStock;
       
-      promises.push(client.query(query, [
+      const offset = batchValues.length * 9;
+      batchParams.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, 1)`);
+      batchValues.push(
         code,
         name,
         parseFloat(row.unit_price) || 0,
@@ -160,17 +152,32 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
         parseInt(row.reorder_level) || 10,
         row.unit || 'pcs',
         parseFloat(row.gst_rate) || 18
-      ]));
+      );
+      
       processedCount++;
       
-      if (promises.length >= 100) {
-        await Promise.all(promises);
-        promises = [];
+      // Execute batch when size reached or at end
+      if (batchValues.length >= BATCH_SIZE * 9 || i === sheetData.length - 1) {
+        if (batchParams.length > 0) {
+          const batchQuery = `
+            INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
+            VALUES ${batchParams.join(', ')}
+            ON CONFLICT (code) DO UPDATE SET
+              name = EXCLUDED.name,
+              unit_price = EXCLUDED.unit_price,
+              cost_price = EXCLUDED.cost_price,
+              stock_quantity = EXCLUDED.stock_quantity,
+              branch_stocks = EXCLUDED.branch_stocks,
+              reorder_level = EXCLUDED.reorder_level,
+              unit = EXCLUDED.unit,
+              gst_rate = EXCLUDED.gst_rate,
+              is_active = 1
+          `;
+          await client.query(batchQuery, batchValues);
+          batchValues = [];
+          batchParams = [];
+        }
       }
-    }
-    
-    if (promises.length > 0) {
-      await Promise.all(promises);
     }
     
     await client.query('COMMIT');
