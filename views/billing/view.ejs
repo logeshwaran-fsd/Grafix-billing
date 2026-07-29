@@ -38,7 +38,7 @@
 
     <style>
       @media print {
-        @page { margin: 5px 1px 0px 1px; }
+        @page { size: A6 portrait; margin: 5px 1px 0px 1px; }
         body, .invoice-print-area { font-family: Arial, sans-serif !important; font-stretch: normal !important; margin: 0 !important; }
         #invoice-card { padding: 0 !important; max-width: 100% !important; border: none !important; border-radius: 0 !important; font-size: 9px !important; }
         .invoice-print-area table { margin-bottom: 12px !important; }
@@ -172,20 +172,32 @@
   }
 
   function downloadPDF() {
-    const element = document.getElementById('invoice-card');
-    element.classList.add('pdf-mode'); // Force print-like layout
+    const originalElement = document.getElementById('invoice-card');
+    const clonedElement = originalElement.cloneNode(true);
+    
+    // Create an isolated, specifically sized element for html2canvas
+    clonedElement.style.position = 'absolute';
+    clonedElement.style.top = '-99999px';
+    clonedElement.style.left = '0';
+    clonedElement.style.width = '105mm'; // Strict A6 width
+    clonedElement.style.background = '#ffffff';
+    clonedElement.classList.add('pdf-mode');
+    document.body.appendChild(clonedElement);
     
     const type = document.getElementById('print-copy-type') ? document.getElementById('print-copy-type').value : 'estimate';
     const opt = {
       margin:       [5, 1, 0, 1], // top, left, bottom, right (in mm)
       filename:     `Invoice_<%= invoice.invoice_number %>_${type}.pdf`,
       image:        { type: 'jpeg', quality: 1 },
-      html2canvas:  { scale: 3, useCORS: true, windowWidth: 420 }, // 420px width matches typical A6 proportion
+      html2canvas:  { scale: 3, useCORS: true },
       jsPDF:        { unit: 'mm', format: 'a6', orientation: 'portrait' }
     };
     
-    html2pdf().from(element).set(opt).save().then(() => {
-      element.classList.remove('pdf-mode'); // Restore normal screen view
+    html2pdf().from(clonedElement).set(opt).save().then(() => {
+      document.body.removeChild(clonedElement);
+    }).catch(err => {
+      console.error('PDF Generation Error:', err);
+      document.body.removeChild(clonedElement);
     });
   }
 
