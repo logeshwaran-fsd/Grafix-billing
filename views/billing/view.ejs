@@ -48,13 +48,46 @@
         .invoice-print-area p { margin-bottom: 2px !important; font-size: 9px !important; }
       }
       
-      /* Exact same styles explicitly for PDF export engine */
-      .pdf-mode { font-family: Arial, sans-serif !important; font-stretch: normal !important; margin: 0 !important; padding: 5px !important; border: none !important; border-radius: 0 !important; font-size: 9px !important; background: #fff !important; }
-      .pdf-mode table { margin-bottom: 12px !important; }
-      .pdf-mode table th, .pdf-mode table td { padding: 3px 4px !important; font-size: 9px !important; white-space: nowrap !important; }
-      .pdf-mode table td:nth-child(2) { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
-      .pdf-mode h1 { font-size: 16px !important; margin-bottom: 2px !important; margin-top: 0 !important; }
-      .pdf-mode p { margin-bottom: 2px !important; font-size: 9px !important; }
+      /* Single-Page A6 PDF Export Mode */
+      .pdf-single-page-export {
+        width: 395px !important;
+        max-width: 395px !important;
+        min-width: 395px !important;
+        padding: 6px !important;
+        margin: 0 !important;
+        font-size: 7.5px !important;
+        font-family: Arial, sans-serif !important;
+        background: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .pdf-single-page-export * {
+        box-sizing: border-box !important;
+      }
+      .pdf-single-page-export table {
+        width: 100% !important;
+        margin-bottom: 4px !important;
+        table-layout: fixed !important;
+      }
+      .pdf-single-page-export th, .pdf-single-page-export td {
+        padding: 1.5px 2px !important;
+        font-size: 7.5px !important;
+        line-height: 1.1 !important;
+      }
+      .pdf-single-page-export th:nth-child(1), .pdf-single-page-export td:nth-child(1) { width: 18px !important; }
+      .pdf-single-page-export th:nth-child(2), .pdf-single-page-export td:nth-child(2) { width: 130px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+      .pdf-single-page-export th:nth-child(3), .pdf-single-page-export td:nth-child(3) { width: 28px !important; text-align: center !important; }
+      .pdf-single-page-export th:nth-child(4), .pdf-single-page-export td:nth-child(4) { width: 55px !important; text-align: right !important; }
+      .pdf-single-page-export th:nth-child(5), .pdf-single-page-export td:nth-child(5) { width: 45px !important; text-align: right !important; }
+      <% if (!isEst) { %>
+        .pdf-single-page-export th:nth-child(6), .pdf-single-page-export td:nth-child(6) { width: 35px !important; text-align: center !important; }
+        .pdf-single-page-export th:nth-child(7), .pdf-single-page-export td:nth-child(7) { width: 60px !important; text-align: right !important; }
+      <% } else { %>
+        .pdf-single-page-export th:nth-child(6), .pdf-single-page-export td:nth-child(6) { width: 60px !important; text-align: right !important; }
+      <% } %>
+      .pdf-single-page-export h1 { font-size: 13px !important; margin: 0 0 2px 0 !important; }
+      .pdf-single-page-export p { font-size: 7.5px !important; line-height: 1.1 !important; margin-bottom: 1px !important; }
+      .pdf-single-page-export img { max-height: 25px !important; margin-bottom: 4px !important; }
     </style>
     <div class="card invoice-print-area" id="invoice-card" style="background:#fff; color:#1e293b; max-width:850px; margin: 0 auto; padding:40px; border-radius:8px; border:1px solid #e2e8f0; font-family:'Inter', sans-serif;">
       <!-- Invoice Header & Customer Details Compacted -->
@@ -175,31 +208,36 @@
     const card = document.getElementById('invoice-card');
     const type = document.getElementById('print-copy-type') ? document.getElementById('print-copy-type').value : 'estimate';
     
-    const origWidth = card.style.width;
-    const origMaxWidth = card.style.maxWidth;
-    const origPadding = card.style.padding;
-
-    // Temporarily fit card to A6 width (395px) for screenshot
-    card.style.width = '395px';
-    card.style.maxWidth = '395px';
-    card.style.padding = '10px';
+    card.classList.add('pdf-single-page-export');
 
     try {
-      const opt = {
-        margin:       [3, 1, 3, 1],
-        filename:     `Invoice_<%= invoice.invoice_number %>_${type}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollY: 0 },
-        jsPDF:        { unit: 'mm', format: 'a6', orientation: 'portrait' }
-      };
+      const canvas = await html2canvas(card, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        scrollY: 0,
+        scrollX: 0
+      });
 
-      await html2pdf().from(card).set(opt).save();
+      card.classList.remove('pdf-single-page-export');
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+      const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : (window.jsPDF || (html2pdf.Worker && html2pdf.Worker.prototype.jsPDF));
+      const pdf = new jsPDFConstructor({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a6'
+      });
+
+      // A6 portrait dimensions: 105mm x 148mm
+      // Force scaling of image onto PAGE 1 ONLY
+      pdf.addImage(imgData, 'JPEG', 0, 0, 105, 148, undefined, 'FAST');
+      pdf.save(`Invoice_<%= invoice.invoice_number %>_${type}.pdf`);
     } catch(err) {
+      card.classList.remove('pdf-single-page-export');
       console.error(err);
-    } finally {
-      card.style.width = origWidth;
-      card.style.maxWidth = origMaxWidth;
-      card.style.padding = origPadding;
+      alert('Failed to generate PDF: ' + err.message);
     }
   }
 
