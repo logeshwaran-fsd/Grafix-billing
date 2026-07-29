@@ -4,6 +4,9 @@ function isAuthenticated(req, res, next) {
   if (req.session && req.session.user) {
     return next();
   }
+  if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json')) || req.path.includes('/api/')) {
+    return res.status(401).json({ success: false, error: 'Session expired. Please log in again.' });
+  }
   res.redirect('/login');
 }
 

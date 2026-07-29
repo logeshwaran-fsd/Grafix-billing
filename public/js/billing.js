@@ -577,6 +577,23 @@ async function submitQuickStock() {
         branch: document.getElementById('branch-select').value
       })
     });
+    
+    if (!res.ok) {
+      if (res.status === 401) {
+        alert('Session expired. Please log in again.');
+        window.location.href = '/login';
+        return;
+      }
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        alert(json.error || 'Failed to update stock (Server Error)');
+      } catch (e) {
+        alert('Server returned an unexpected error page.');
+      }
+      return;
+    }
+
     const result = await res.json();
     if (result.success) {
       if (pendingProductToAdd.updateIndex !== undefined) {
@@ -595,7 +612,8 @@ async function submitQuickStock() {
       alert(result.error || 'Failed to update stock');
     }
   } catch(err) {
-    alert('Error updating stock');
+    console.error(err);
+    alert('Error updating stock: ' + err.message);
   }
 }
 
