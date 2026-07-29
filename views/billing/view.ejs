@@ -172,33 +172,58 @@
   }
 
   function downloadPDF() {
-    const originalElement = document.getElementById('invoice-card');
-    const clonedElement = originalElement.cloneNode(true);
-    
-    // Create an isolated, specifically sized element for html2canvas
-    clonedElement.style.position = 'absolute';
-    clonedElement.style.top = '-99999px';
-    clonedElement.style.left = '0';
-    clonedElement.style.width = '105mm'; // Strict A6 width
-    clonedElement.style.background = '#ffffff';
-    clonedElement.classList.add('pdf-mode');
-    document.body.appendChild(clonedElement);
-    
+    const element = document.getElementById('invoice-card');
     const type = document.getElementById('print-copy-type') ? document.getElementById('print-copy-type').value : 'estimate';
+    
     const opt = {
-      margin:       [5, 1, 0, 1], // top, left, bottom, right (in mm)
+      margin:       [5, 1, 5, 1], // top, left, bottom, right in mm
       filename:     `Invoice_<%= invoice.invoice_number %>_${type}.pdf`,
-      image:        { type: 'jpeg', quality: 1 },
-      html2canvas:  { scale: 3, useCORS: true },
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true,
+        scrollY: 0,
+        scrollX: 0,
+        onclone: (clonedDoc) => {
+          const card = clonedDoc.getElementById('invoice-card');
+          if (card) {
+            card.style.maxWidth = '100%';
+            card.style.width = '100%';
+            card.style.padding = '5px';
+            card.style.margin = '0';
+            card.style.border = 'none';
+            card.style.borderRadius = '0';
+            card.style.fontSize = '9px';
+            card.style.fontFamily = 'Arial, sans-serif';
+            
+            const tables = card.querySelectorAll('table');
+            tables.forEach(t => t.style.marginBottom = '8px');
+            
+            const cells = card.querySelectorAll('th, td');
+            cells.forEach(c => {
+              c.style.padding = '2px 3px';
+              c.style.fontSize = '9px';
+            });
+            
+            const headings = card.querySelectorAll('h1');
+            headings.forEach(h => {
+              h.style.fontSize = '16px';
+              h.style.marginTop = '0';
+              h.style.marginBottom = '2px';
+            });
+            
+            const paragraphs = card.querySelectorAll('p');
+            paragraphs.forEach(p => {
+              p.style.fontSize = '9px';
+              p.style.marginBottom = '2px';
+            });
+          }
+        }
+      },
       jsPDF:        { unit: 'mm', format: 'a6', orientation: 'portrait' }
     };
     
-    html2pdf().from(clonedElement).set(opt).save().then(() => {
-      document.body.removeChild(clonedElement);
-    }).catch(err => {
-      console.error('PDF Generation Error:', err);
-      document.body.removeChild(clonedElement);
-    });
+    html2pdf().from(element).set(opt).save();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
