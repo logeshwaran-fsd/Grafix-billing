@@ -118,6 +118,8 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     const branches = branchesRes.rows.map(b => b.name);
 
     let processedCount = 0;
+    let promises = [];
+    
     for (const rawRow of sheetData) {
       const row = {};
       for (const k in rawRow) {
@@ -148,7 +150,7 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       
       const totalStock = hasBranchColumns ? branchSum : baseStock;
       
-      await client.query(query, [
+      promises.push(client.query(query, [
         code,
         name,
         parseFloat(row.unit_price) || 0,
@@ -158,8 +160,17 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
         parseInt(row.reorder_level) || 10,
         row.unit || 'pcs',
         parseFloat(row.gst_rate) || 18
-      ]);
+      ]));
       processedCount++;
+      
+      if (promises.length >= 100) {
+        await Promise.all(promises);
+        promises = [];
+      }
+    }
+    
+    if (promises.length > 0) {
+      await Promise.all(promises);
     }
     
     await client.query('COMMIT');
