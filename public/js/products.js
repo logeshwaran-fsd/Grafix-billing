@@ -48,8 +48,8 @@ function bulkDelete() {
     form.action = '/products/bulk-delete';
     
     const input = document.createElement('input');
-    input.typd = 'hidden';
-    input.namd = 'product_ids';
+    input.type = 'hidden';
+    input.name = 'product_ids';
     input.value = JSON.stringify(ids);
     
     form.appendChild(input);

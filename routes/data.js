@@ -117,26 +117,33 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     const branchesRes = await client.query('SELECT name FROM branches');
     const branches = branchesRes.rows.map(b => b.name);
 
-    for (const row of sheetData) {
+    for (const rawRow of sheetData) {
+      const row = {};
+      for (const k in rawRow) {
+        row[k.toLowerCase().trim()] = rawRow[k];
+      }
+      
       if (!row.code || !row.name) continue;
       
       const branch_stocks = {};
-      // Base stock quantity (if specified)
-      let baseStock = parseInt(row.stock_quantity) || 0;
+      let baseStock = parseInt(row.stock_quantity) || parseInt(row.total_stock) || 0;
       let branchSum = 0;
+      let hasBranchColumns = false;
       
       for (const branch of branches) {
-         const key = Object.keys(row).find(k => k.toLowerCase().trim() === branch.toLowerCase() || (branch.toLowerCase() === 'parrys' && k.toLowerCase().trim() === 'paris'));
+         const branchKey = branch.toLowerCase();
+         const key = Object.keys(row).find(k => k === branchKey || (branchKey === 'parrys' && k === 'paris'));
+         if (key !== undefined) hasBranchColumns = true;
          const stock = key ? (parseInt(row[key]) || 0) : 0;
          branch_stocks[branch] = stock;
          branchSum += stock;
       }
       
-      const totalStock = baseStock + branchSum;
+      const totalStock = hasBranchColumns ? branchSum : baseStock;
       
       await client.query(query, [
         row.code.toString(),
-        row.name,
+        row.name.toString(),
         parseFloat(row.unit_price) || 0,
         parseFloat(row.cost_price) || 0,
         totalStock,
