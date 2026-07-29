@@ -38,7 +38,9 @@
 
     <style>
       @media print {
-        #invoice-card { padding: 8px !important; max-width: 100% !important; border: none !important; border-radius: 0 !important; font-size: 10px !important; }
+        @page { margin: 5px 1px 0px 1px; }
+        body, .invoice-print-area { font-family: Arial, sans-serif !important; font-stretch: normal !important; margin: 0 !important; }
+        #invoice-card { padding: 0 !important; max-width: 100% !important; border: none !important; border-radius: 0 !important; font-size: 10px !important; }
         .invoice-print-area table { margin-bottom: 12px !important; }
         .invoice-print-area table th, .invoice-print-area table td { padding: 3px 4px !important; font-size: 9.5px !important; white-space: nowrap !important; }
         .invoice-print-area table td:nth-child(2) { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }

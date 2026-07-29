@@ -117,13 +117,20 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     const branchesRes = await client.query('SELECT name FROM branches');
     const branches = branchesRes.rows.map(b => b.name);
 
+    let processedCount = 0;
     for (const rawRow of sheetData) {
       const row = {};
       for (const k in rawRow) {
         row[k.toLowerCase().trim()] = rawRow[k];
       }
       
-      if (!row.code || !row.name) continue;
+      let code = row['code'] || row['item code'] || row['product code'];
+      let name = row['name'] || row['item name'] || row['product name'] || row['product'];
+      
+      if (code !== undefined) code = code.toString().trim();
+      if (name !== undefined) name = name.toString().trim();
+
+      if (!code || !name) continue;
       
       const branch_stocks = {};
       let baseStock = parseInt(row.stock_quantity) || parseInt(row.total_stock) || 0;
@@ -142,8 +149,8 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       const totalStock = hasBranchColumns ? branchSum : baseStock;
       
       await client.query(query, [
-        row.code.toString(),
-        row.name.toString(),
+        code,
+        name,
         parseFloat(row.unit_price) || 0,
         parseFloat(row.cost_price) || 0,
         totalStock,
@@ -152,10 +159,11 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
         row.unit || 'pcs',
         parseFloat(row.gst_rate) || 18
       ]);
+      processedCount++;
     }
     
     await client.query('COMMIT');
-    req.session.success = `Successfully imported ${sheetData.length} products!`;
+    req.session.success = `Successfully processed ${processedCount} valid products out of ${sheetData.length} rows!`;
   } catch (err) {
     if (client) await client.query('ROLLBACK');
     console.error(err);
