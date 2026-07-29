@@ -140,7 +140,7 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       
       const totalStock = hasBranchColumns ? branchSum : baseStock;
       
-      const offset = batchValues.length * 9;
+      const offset = batchValues.length;
       batchParams.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, 1)`);
       batchValues.push(
         code,
