@@ -20,8 +20,27 @@ router.get('/backup', (req, res) => {
 router.get('/export/products', async (req, res) => {
   try {
     const db = getDb();
-    const productsRes = await db.query('SELECT p.code, p.name, c.name as category, p.unit_price, p.cost_price, p.stock_quantity, p.reorder_level, p.unit, p.gst_rate FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1');
-    const products = productsRes.rows;
+    const branchesRes = await db.query('SELECT name FROM branches ORDER BY name ASC');
+    const branches = branchesRes.rows.map(b => b.name);
+    
+    const productsRes = await db.query('SELECT p.code, p.name, c.name as category, p.unit_price, p.cost_price, p.stock_quantity, p.branch_stocks, p.reorder_level, p.unit, p.gst_rate FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1');
+    const products = productsRes.rows.map(p => {
+       const obj = {
+          code: p.code,
+          name: p.name,
+          category: p.category,
+          unit_price: p.unit_price,
+          cost_price: p.cost_price,
+          stock_quantity: p.stock_quantity,
+       };
+       branches.forEach(b => {
+          obj[b] = (p.branch_stocks && p.branch_stocks[b]) ? p.branch_stocks[b] : 0;
+       });
+       obj.reorder_level = p.reorder_level;
+       obj.unit = p.unit;
+       obj.gst_rate = p.gst_rate;
+       return obj;
+    });
     
     const wb = xlsx.utils.book_new();
     const ws = xlsx.utils.json_to_sheet(products);

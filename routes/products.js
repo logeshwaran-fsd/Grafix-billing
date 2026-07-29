@@ -116,8 +116,21 @@ router.post('/add', async (req, res) => {
     }
 
     await db.query(`
-      INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description, is_active) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 1)
+      ON CONFLICT (code) DO UPDATE SET
+        name = EXCLUDED.name,
+        category_id = EXCLUDED.category_id,
+        unit_price = EXCLUDED.unit_price,
+        cost_price = EXCLUDED.cost_price,
+        stock_quantity = EXCLUDED.stock_quantity,
+        branch_stocks = EXCLUDED.branch_stocks,
+        reorder_level = EXCLUDED.reorder_level,
+        unit = EXCLUDED.unit,
+        hsn_code = EXCLUDED.hsn_code,
+        gst_rate = EXCLUDED.gst_rate,
+        description = EXCLUDED.description,
+        is_active = 1
     `, [code, name, category_id || null, unit_price, cost_price, total_stock, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description]);
     req.session.success = 'Product added successfully!';
     res.redirect('/products');
@@ -135,7 +148,15 @@ router.post('/api/quick-add', async (req, res) => {
     const db = getDb();
     const result = await db.query(`
       INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, reorder_level, unit, gst_rate, is_active) 
-      VALUES ($1, $2, $3, $4, $5, 10, 'pcs', $6, 1) RETURNING *
+      VALUES ($1, $2, $3, $4, $5, 10, 'pcs', $6, 1)
+      ON CONFLICT (code) DO UPDATE SET
+        name = EXCLUDED.name,
+        unit_price = EXCLUDED.unit_price,
+        cost_price = EXCLUDED.cost_price,
+        stock_quantity = EXCLUDED.stock_quantity,
+        gst_rate = EXCLUDED.gst_rate,
+        is_active = 1
+      RETURNING *
     `, [code, name, unit_price || 0, cost_price || 0, stock_quantity || 0, gst_rate || 18]);
     const insertedProduct = result.rows[0];
     res.json({ success: true, product: { id: insertedProduct.id, code, name, unit_price: unit_price || 0, stock_quantity: stock_quantity || 0, gst_rate: gst_rate || 18 } });
@@ -196,8 +217,16 @@ router.post('/delete/:id', async (req, res) => {
 
 router.post('/bulk-delete', async (req, res) => {
   let ids = req.body.product_ids;
-  if (typeof ids === 'string') ids = JSON.parse(ids);
-  if (!ids || ids.length === 0) return res.redirect('/products');
+  if (!ids) return res.redirect('/products');
+  if (typeof ids === 'string') {
+    try {
+      ids = JSON.parse(ids);
+    } catch(e) {
+      ids = [ids];
+    }
+  }
+  if (!Array.isArray(ids)) ids = [ids];
+  if (ids.length === 0) return res.redirect('/products');
   try {
     const placeholders = ids.map((_, i) => '$' + (i + 1)).join(',');
     await getDb().query('UPDATE products SET is_active = 0 WHERE id IN (' + placeholders + ')', ids);
