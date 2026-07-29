@@ -159,28 +159,45 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       
       processedCount++;
       
-      // Execute batch when size reached or at end
-      if (batchValues.length >= BATCH_SIZE * 9 || i === sheetData.length - 1) {
-        if (batchParams.length > 0) {
-          const batchQuery = `
-            INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
-            VALUES ${batchParams.join(', ')}
-            ON CONFLICT (code) DO UPDATE SET
-              name = EXCLUDED.name,
-              unit_price = EXCLUDED.unit_price,
-              cost_price = EXCLUDED.cost_price,
-              stock_quantity = EXCLUDED.stock_quantity,
-              branch_stocks = EXCLUDED.branch_stocks,
-              reorder_level = EXCLUDED.reorder_level,
-              unit = EXCLUDED.unit,
-              gst_rate = EXCLUDED.gst_rate,
-              is_active = 1
-          `;
-          await client.query(batchQuery, batchValues);
-          batchValues = [];
-          batchParams = [];
-        }
+      // Execute batch when size reached
+      if (batchValues.length >= BATCH_SIZE * 9) {
+        const batchQuery = `
+          INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
+          VALUES ${batchParams.join(', ')}
+          ON CONFLICT (code) DO UPDATE SET
+            name = EXCLUDED.name,
+            unit_price = EXCLUDED.unit_price,
+            cost_price = EXCLUDED.cost_price,
+            stock_quantity = EXCLUDED.stock_quantity,
+            branch_stocks = EXCLUDED.branch_stocks,
+            reorder_level = EXCLUDED.reorder_level,
+            unit = EXCLUDED.unit,
+            gst_rate = EXCLUDED.gst_rate,
+            is_active = 1
+        `;
+        await client.query(batchQuery, batchValues);
+        batchValues = [];
+        batchParams = [];
       }
+    }
+    
+    // Final flush for any remaining records
+    if (batchParams.length > 0) {
+      const batchQuery = `
+        INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
+        VALUES ${batchParams.join(', ')}
+        ON CONFLICT (code) DO UPDATE SET
+          name = EXCLUDED.name,
+          unit_price = EXCLUDED.unit_price,
+          cost_price = EXCLUDED.cost_price,
+          stock_quantity = EXCLUDED.stock_quantity,
+          branch_stocks = EXCLUDED.branch_stocks,
+          reorder_level = EXCLUDED.reorder_level,
+          unit = EXCLUDED.unit,
+          gst_rate = EXCLUDED.gst_rate,
+          is_active = 1
+      `;
+      await client.query(batchQuery, batchValues);
     }
     
     await client.query('COMMIT');
