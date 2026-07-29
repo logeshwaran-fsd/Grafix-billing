@@ -211,33 +211,26 @@
     card.classList.add('pdf-single-page-export');
 
     try {
-      const canvas = await html2canvas(card, {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        scrollY: 0,
-        scrollX: 0
-      });
+      const opt = {
+        margin:       [1, 1, 1, 1], // 1mm minimal margins
+        filename:     `Invoice_<%= invoice.invoice_number %>_${type}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollY: 0, scrollX: 0 },
+        jsPDF:        { unit: 'mm', format: 'a6', orientation: 'portrait' }
+      };
 
-      card.classList.remove('pdf-single-page-export');
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
-
-      const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : (window.jsPDF || (html2pdf.Worker && html2pdf.Worker.prototype.jsPDF));
-      const pdf = new jsPDFConstructor({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a6'
-      });
-
-      // A6 portrait dimensions: 105mm x 148mm
-      // Force scaling of image onto PAGE 1 ONLY
-      pdf.addImage(imgData, 'JPEG', 0, 0, 105, 148, undefined, 'FAST');
-      pdf.save(`Invoice_<%= invoice.invoice_number %>_${type}.pdf`);
+      await html2pdf().from(card).set(opt).toPdf().get('pdf').then(function(pdf) {
+        // Delete any extra pages created by html2pdf so it is strictly 1 single page!
+        const totalPages = pdf.internal.getNumberOfPages();
+        for (let i = totalPages; i > 1; i--) {
+          pdf.deletePage(i);
+        }
+      }).save();
     } catch(err) {
-      card.classList.remove('pdf-single-page-export');
       console.error(err);
       alert('Failed to generate PDF: ' + err.message);
+    } finally {
+      card.classList.remove('pdf-single-page-export');
     }
   }
 
