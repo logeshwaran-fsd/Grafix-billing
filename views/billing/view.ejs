@@ -16,7 +16,7 @@
         </select>
       <% } %>
       
-      <button onclick="window.print()" class="btn btn-primary">Print A4 🖨️</button>
+      <button onclick="window.print()" class="btn btn-primary">Print 🖨️</button>
       <button onclick="downloadPDF()" class="btn btn-success">Download PDF 📄</button>
       <a href="/billing/new?clone=<%= invoice.id %>" class="btn btn-warning" style="background:#f59e0b; color:#fff; font-weight:600; border:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">Clone Bill 📄</a>
       <% if (user && user.role === 'admin') { %>
