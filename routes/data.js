@@ -104,6 +104,19 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     const branchesRes = await client.query('SELECT name FROM branches');
     const branches = branchesRes.rows.map(b => b.name);
     
+    // Build an intelligent code lookup map to match numeric variations (e.g. '1' in Excel to '001' in DB)
+    const existingProductsRes = await client.query('SELECT code FROM products');
+    const existingCodeMap = new Map();
+    existingProductsRes.rows.forEach(p => {
+      if (p.code) {
+        const raw = p.code.toString().trim();
+        existingCodeMap.set(raw.toLowerCase(), p.code);
+        if (/^\d+$/.test(raw)) {
+          existingCodeMap.set(parseInt(raw, 10).toString(), p.code);
+        }
+      }
+    });
+    
     // Batch process in chunks of 500 rows to avoid PostgreSQL max parameter limits
     const BATCH_SIZE = 500;
     let batchValues = [];
@@ -119,7 +132,15 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       let code = row['code'] || row['item code'] || row['product code'];
       let name = row['name'] || row['item name'] || row['product name'] || row['product'];
       
-      if (code !== undefined) code = code.toString().trim();
+      if (code !== undefined) {
+        code = code.toString().trim();
+        const lowerCode = code.toLowerCase();
+        if (existingCodeMap.has(lowerCode)) {
+          code = existingCodeMap.get(lowerCode);
+        } else if (/^\d+$/.test(code) && code.length < 3) {
+          code = code.padStart(3, '0');
+        }
+      }
       if (name !== undefined) name = name.toString().trim();
 
       if (!code || !name) continue;

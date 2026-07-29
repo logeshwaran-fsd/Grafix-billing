@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
       query += ` AND (p.name ILIKE $${paramIndex++} OR p.code ILIKE $${paramIndex++})`;
       params.push(`%${search}%`, `%${search}%`);
     }
-    query += ' ORDER BY p.code ASC';
+    query += " ORDER BY CASE WHEN p.code ~ '^[0-9]+$' THEN LPAD(p.code, 10, '0') ELSE p.code END ASC";
     const productsRes = await db.query(query, params);
     const products = productsRes.rows;
 

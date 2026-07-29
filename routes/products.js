@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
     const totalCount = parseInt(countRes.rows[0].count);
     const totalPages = Math.ceil(totalCount / limit);
 
-    query += ` ORDER BY p.code ASC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    query += ` ORDER BY CASE WHEN p.code ~ '^[0-9]+$' THEN LPAD(p.code, 10, '0') ELSE p.code END ASC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(limit, offset);
 
     const productsRes = await db.query(query, params);
