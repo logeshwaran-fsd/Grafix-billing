@@ -254,4 +254,16 @@ router.post('/bulk-edit', async (req, res) => {
   res.redirect('/products');
 });
 
+router.post('/delete-all', async (req, res) => {
+  try {
+    const db = getDb();
+    await db.query('UPDATE products SET is_active = 0');
+    req.session.success = 'All products have been deleted successfully!';
+  } catch (err) {
+    console.error(err);
+    req.session.error = 'Failed to delete all products';
+  }
+  res.redirect('/products');
+});
+
 module.exports = router;

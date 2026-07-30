@@ -57,3 +57,16 @@ function bulkDelete() {
     form.submit();
   }
 }
+
+function deleteAllProducts() {
+  const confirmText = prompt('⚠️ DANGER: This will delete ALL products in your inventory!\n\nType "DELETE ALL" to confirm:');
+  if (confirmText === 'DELETE ALL') {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/products/delete-all';
+    document.body.appendChild(form);
+    form.submit();
+  } else if (confirmText !== null) {
+    alert('Action cancelled: You must type "DELETE ALL" exactly to confirm deletion.');
+  }
+}
