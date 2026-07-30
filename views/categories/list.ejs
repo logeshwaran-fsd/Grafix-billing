@@ -25,6 +25,7 @@
         <div class="table-container">
           <table>
             <thead>
+              <tr>
                 <th>Brand Name</th>
                 <th>Description</th>
                 <th class="text-center">Count</th>
@@ -34,9 +35,10 @@
             </thead>
             <tbody>
               <% if (categories.length === 0) { %>
-                <tr><td colspan="4" class="table-empty">No brands added yet</td></tr>
+                <tr><td colspan="5" class="table-empty">No brands added yet</td></tr>
               <% } %>
               <% categories.forEach(cat => { %>
+                <tr>
                   <td class="fw-bold"><%= cat.name %></td>
                   <td class="text-secondary"><%= cat.description || 'No description' %></td>
                   <td class="text-center"><span class="badge badge-default"><%= cat.product_count %></span></td>

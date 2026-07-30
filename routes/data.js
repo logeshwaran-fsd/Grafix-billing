@@ -28,7 +28,7 @@ router.get('/export/products', async (req, res) => {
        const obj = {
           code: p.code,
           name: p.name,
-          category: p.category,
+          brand: p.category || 'Unbranded',
           unit_price: p.unit_price,
           cost_price: p.cost_price,
           stock_quantity: p.stock_quantity,
@@ -104,6 +104,11 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     const branchesRes = await client.query('SELECT name FROM branches');
     const branches = branchesRes.rows.map(b => b.name);
     
+    // Build an intelligent brand (categories) map to auto-fetch or auto-create brands
+    const categoriesRes = await client.query('SELECT id, name FROM categories');
+    const brandMap = new Map();
+    categoriesRes.rows.forEach(c => brandMap.set(c.name.toLowerCase().trim(), c.id));
+
     // Build an intelligent code lookup map to match numeric variations (e.g. '1' in Excel to '001' in DB)
     const existingProductsRes = await client.query('SELECT code FROM products');
     const existingCodeMap = new Map();
@@ -131,7 +136,8 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       
       let code = row['code'] || row['item code'] || row['product code'];
       let name = row['name'] || row['item name'] || row['product name'] || row['product'];
-      
+      let brandRaw = row['brand'] || row['brand name'] || row['category'] || row['category name'];
+
       if (code !== undefined) {
         code = code.toString().trim();
         const lowerCode = code.toLowerCase();
@@ -145,6 +151,22 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
 
       if (!code || !name) continue;
       
+      // Auto-fetch or auto-create brand ID
+      let categoryId = null;
+      if (brandRaw !== undefined && brandRaw !== null) {
+        const brandStr = brandRaw.toString().trim();
+        if (brandStr) {
+          const lowerBrand = brandStr.toLowerCase();
+          if (brandMap.has(lowerBrand)) {
+            categoryId = brandMap.get(lowerBrand);
+          } else {
+            const newCat = await client.query('INSERT INTO categories (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id', [brandStr]);
+            categoryId = newCat.rows[0].id;
+            brandMap.set(lowerBrand, categoryId);
+          }
+        }
+      }
+
       const branch_stocks = {};
       let baseStock = parseInt(row.stock_quantity) || parseInt(row.total_stock) || 0;
       let branchSum = 0;
@@ -165,10 +187,11 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       const totalStock = hasBranchColumns ? branchSum : baseStock;
       
       const offset = batchValues.length;
-      batchParams.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, 1)`);
+      batchParams.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, 1)`);
       batchValues.push(
         code,
         name,
+        categoryId,
         parseFloat(row.unit_price) || 0,
         parseFloat(row.cost_price) || 0,
         totalStock,
@@ -181,12 +204,13 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
       processedCount++;
       
       // Execute batch when size reached
-      if (batchValues.length >= BATCH_SIZE * 9) {
+      if (batchValues.length >= BATCH_SIZE * 10) {
         const batchQuery = `
-          INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
+          INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
           VALUES ${batchParams.join(', ')}
           ON CONFLICT (code) DO UPDATE SET
             name = EXCLUDED.name,
+            category_id = COALESCE(EXCLUDED.category_id, products.category_id),
             unit_price = EXCLUDED.unit_price,
             cost_price = EXCLUDED.cost_price,
             stock_quantity = EXCLUDED.stock_quantity,
@@ -205,10 +229,11 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     // Final flush for any remaining records
     if (batchParams.length > 0) {
       const batchQuery = `
-        INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
+        INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, gst_rate, is_active)
         VALUES ${batchParams.join(', ')}
         ON CONFLICT (code) DO UPDATE SET
           name = EXCLUDED.name,
+          category_id = COALESCE(EXCLUDED.category_id, products.category_id),
           unit_price = EXCLUDED.unit_price,
           cost_price = EXCLUDED.cost_price,
           stock_quantity = EXCLUDED.stock_quantity,

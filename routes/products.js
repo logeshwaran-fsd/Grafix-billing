@@ -20,8 +20,12 @@ router.get('/', async (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
     if (category) {
-      query += ` AND p.category_id = $${paramIndex++}`;
-      params.push(category);
+      if (category === 'unbranded') {
+        query += ` AND p.category_id IS NULL`;
+      } else {
+        query += ` AND p.category_id = $${paramIndex++}`;
+        params.push(category);
+      }
     }
 
     const totalCountQuery = query.replace('p.*, c.name as category_name', 'COUNT(p.id) as count');
@@ -35,7 +39,7 @@ router.get('/', async (req, res) => {
     const productsRes = await db.query(query, params);
     const products = productsRes.rows;
 
-    const categoriesRes = await db.query('SELECT * FROM categories');
+    const categoriesRes = await db.query('SELECT * FROM categories ORDER BY name ASC');
     const categories = categoriesRes.rows;
 
     const branchesRes = await db.query('SELECT name FROM branches ORDER BY name ASC');

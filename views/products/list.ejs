@@ -9,6 +9,7 @@
         <input type="text" name="search" class="form-control" placeholder="Search code, name..." value="<%= search %>" style="max-width:200px;">
         <select name="category" class="form-control" style="max-width:200px;">
           <option value="">All Brands</option>
+          <option value="unbranded" <%= selectedCategory === 'unbranded' ? 'selected' : '' %>>Unbranded</option>
           <% categories.forEach(cat => { %>
             <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
           <% }) %>
