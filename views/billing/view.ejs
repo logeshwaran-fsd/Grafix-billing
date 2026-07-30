@@ -118,10 +118,9 @@
           <% if (!isEst) { %>
             <!-- Badge removed -->
           <% } %>
-          <h1 style="font-size:24px; font-weight:800; color:#14b8a6; margin-bottom:8px; margin-top:0;">ESTIMATE</h1>
-          <p style="font-size:14px; margin-bottom:4px;"><strong>Estimate #:</strong> <%= invoice.invoice_number %></p>
-          <p style="font-size:14px; margin-bottom:4px;"><strong>Date:</strong> <%= new Date(invoice.created_at).toLocaleDateString('en-IN') %></p>
-          <p style="font-size:14px; margin-bottom:8px;"><strong>Status:</strong> <span style="text-transform:uppercase; font-weight:700; color: <%= invoice.payment_status === 'paid' ? '#10b981' : (invoice.payment_status === 'pending' ? '#f59e0b' : '#ef4444') %>"><%= invoice.payment_status %></span></p>
+          <h1 style="font-size:24px; font-weight:800; color:#14b8a6; margin-bottom:8px; margin-top:0;"><%= isEst ? 'ESTIMATE' : 'INVOICE' %></h1>
+          <p style="font-size:14px; margin-bottom:4px;"><strong><%= isEst ? 'Estimate #:' : 'Invoice #:' %></strong> <%= invoice.invoice_number %></p>
+          <p style="font-size:14px; margin-bottom:8px;"><strong>Date:</strong> <%= new Date(invoice.created_at).toLocaleDateString('en-IN') %></p>
           
           <div style="text-align:right; max-width: 250px; margin-top:10px;">
             <p style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:2px;"><%= isEst ? 'Estimate For:' : 'Billed To:' %></p>
@@ -168,7 +167,8 @@
       <!-- Summary -->
       <div style="display:flex; justify-content:space-between;">
         <div style="max-width:350px; font-size:13px; color:#64748b;">
-          <p style="margin-bottom:8px;"><strong>Payment Method:</strong> <span style="text-transform:uppercase;"><%= invoice.payment_method %></span></p>
+          <p style="margin-bottom:4px;"><strong>Payment Method:</strong> <span style="text-transform:uppercase;"><%= invoice.payment_method %></span></p>
+          <p style="margin-bottom:8px;"><strong>Payment Status:</strong> <span style="text-transform:uppercase; font-weight:700; color: <%= invoice.payment_status === 'paid' ? '#10b981' : (invoice.payment_status === 'pending' ? '#f59e0b' : '#ef4444') %>"><%= invoice.payment_status %></span></p>
         </div>
         <div style="min-width:240px; font-size:14px;">
           <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
