@@ -130,8 +130,6 @@
             <% if (invoice.customer_city || invoice.customer_pincode) { %>
               <p style="font-size:11px; color:#000; margin-bottom:0;"><%= invoice.customer_city || '' %><%= (invoice.customer_city && invoice.customer_pincode) ? ' - ' : '' %><%= invoice.customer_pincode || '' %></p>
             <% } %>
-            <% if (!isEst && invoice.customer_gstin) { %><p style="font-size:11px; color:#000; margin-bottom:0;">GSTIN: <%= invoice.customer_gstin %></p><% } %>
-            <% if (invoice.customer_address) { %><p style="font-size:11px; color:#000; margin-bottom:0; max-width: 220px; margin-left: auto; word-wrap: break-word;"><%= invoice.customer_address %></p><% } %>
           </div>
         </div>
       </div>
