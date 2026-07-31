@@ -446,7 +446,7 @@ router.get('/:id', async (req, res) => {
   try {
     const db = getDb();
     const invRes = await db.query(`
-      SELECT i.*, c.name as customer_name, c.phone as customer_phone, c.gstin as customer_gstin, c.address as customer_address, u.full_name as billed_by
+      SELECT i.*, c.name as customer_name, c.phone as customer_phone, c.gstin as customer_gstin, c.address as customer_address, c.city as customer_city, c.pincode as customer_pincode, u.full_name as billed_by
       FROM invoices i
       LEFT JOIN customers c ON i.customer_id = c.id
       LEFT JOIN users u ON i.user_id = u.id

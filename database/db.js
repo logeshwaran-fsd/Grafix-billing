@@ -83,6 +83,14 @@ async function initialize() {
       await database.query("ALTER TABLE invoices ADD COLUMN amount_paid DECIMAL(10,2) DEFAULT 0.0");
     } catch (err) {}
 
+    // Migration: Add phone_01 and phone_02 columns to customers
+    try {
+      await database.query("ALTER TABLE customers ADD COLUMN phone_01 TEXT");
+    } catch (err) {}
+    try {
+      await database.query("ALTER TABLE customers ADD COLUMN phone_02 TEXT");
+    } catch (err) {}
+
   } catch (err) {
     console.error('Database initialization error:', err);
   }

@@ -126,7 +126,10 @@
           
           <div style="text-align:right; max-width: 250px; margin-top:10px;">
             <p style="font-size:13px; font-weight:700; color:#000; margin-bottom:2px;"><%= invoice.customer_name || 'Walk-in Customer' %></p>
-            <% if (invoice.customer_phone) { %><p style="font-size:11px; color:#000; margin-bottom:0;">Phone: <%= invoice.customer_phone %></p><% } %>
+            <% if (invoice.customer_phone) { %><p style="font-size:11px; color:#000; margin-bottom:0;">Ph: <%= invoice.customer_phone %></p><% } %>
+            <% if (invoice.customer_city || invoice.customer_pincode) { %>
+              <p style="font-size:11px; color:#000; margin-bottom:0;"><%= invoice.customer_city || '' %><%= (invoice.customer_city && invoice.customer_pincode) ? ' - ' : '' %><%= invoice.customer_pincode || '' %></p>
+            <% } %>
             <% if (!isEst && invoice.customer_gstin) { %><p style="font-size:11px; color:#000; margin-bottom:0;">GSTIN: <%= invoice.customer_gstin %></p><% } %>
             <% if (invoice.customer_address) { %><p style="font-size:11px; color:#000; margin-bottom:0; max-width: 220px; margin-left: auto; word-wrap: break-word;"><%= invoice.customer_address %></p><% } %>
           </div>
