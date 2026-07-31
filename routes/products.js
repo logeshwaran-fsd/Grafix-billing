@@ -16,8 +16,11 @@ router.get('/', async (req, res) => {
     let paramIndex = 1;
 
     if (search) {
-      query += ` AND (p.name ILIKE $${paramIndex++} OR p.code ILIKE $${paramIndex++})`;
-      params.push(`%${search}%`, `%${search}%`);
+      const trimmed = search.trim();
+      const padded = /^\d+$/.test(trimmed) ? trimmed.padStart(3, '0') : trimmed;
+      query += ` AND (p.name ILIKE $${paramIndex} OR p.code ILIKE $${paramIndex} OR LTRIM(p.code, '0') ILIKE $${paramIndex+1} OR p.code ILIKE $${paramIndex+2})`;
+      params.push(`%${trimmed}%`, `${trimmed}%`, `${padded}%`);
+      paramIndex += 3;
     }
     if (category) {
       if (category === 'unbranded') {
@@ -62,15 +65,32 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/api/search', async (req, res) => {
-  const q = req.query.q || '';
+  const rawQ = (req.query.q || '').trim();
+  if (!rawQ) return res.json([]);
   try {
     const db = getDb();
+    const paddedQ = /^\d+$/.test(rawQ) ? rawQ.padStart(3, '0') : rawQ;
+    const searchPattern = `%${rawQ}%`;
     const resDb = await db.query(`
       SELECT id, code, name, unit_price, stock_quantity, branch_stocks, gst_rate 
       FROM products 
-      WHERE (name ILIKE $1 OR code ILIKE $2) AND is_active = 1
-      LIMIT 10
-    `, [`${q}%`, `${q}%`]);
+      WHERE is_active = 1 AND (
+        name ILIKE $1 OR 
+        code ILIKE $1 OR 
+        LTRIM(code, '0') ILIKE $2 OR
+        code ILIKE $3
+      )
+      ORDER BY 
+        CASE 
+          WHEN code = $4 THEN 0
+          WHEN code = $5 THEN 1
+          WHEN LTRIM(code, '0') = $4 THEN 2
+          WHEN code ILIKE $6 THEN 3
+          ELSE 4
+        END,
+        CASE WHEN code ~ '^[0-9]+$' THEN LPAD(code, 10, '0') ELSE code END ASC
+      LIMIT 20
+    `, [searchPattern, `${rawQ}%`, `${paddedQ}%`, rawQ, paddedQ, `${rawQ}%`]);
     res.json(resDb.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
