@@ -306,19 +306,18 @@ router.post('/import/customers', upload.single('file'), async (req, res) => {
       const pincodeStr = pincodeRaw ? pincodeRaw.toString().trim() : '';
 
       if (phoneStr) {
-        await client.query(`
-          INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          ON CONFLICT (phone) DO UPDATE SET
-            name = EXCLUDED.name,
-            email = EXCLUDED.email,
-            address = EXCLUDED.address,
-            gstin = EXCLUDED.gstin,
-            city = EXCLUDED.city,
-            state = EXCLUDED.state,
-            pincode = EXCLUDED.pincode,
-            balance = EXCLUDED.balance
-        `, [nameStr, phoneStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance]);
+        const existing = await client.query('SELECT id FROM customers WHERE phone = $1', [phoneStr]);
+        if (existing.rows.length > 0) {
+          await client.query(`
+            UPDATE customers SET name = $1, email = $2, address = $3, gstin = $4, city = $5, state = $6, pincode = $7, balance = $8
+            WHERE id = $9
+          `, [nameStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance, existing.rows[0].id]);
+        } else {
+          await client.query(`
+            INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          `, [nameStr, phoneStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance]);
+        }
       } else {
         // If phone is missing, match existing customer by name
         const existing = await client.query('SELECT id FROM customers WHERE LOWER(name) = LOWER($1)', [nameStr]);
