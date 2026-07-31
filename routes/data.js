@@ -280,34 +280,60 @@ router.post('/import/customers', upload.single('file'), async (req, res) => {
       const rawRow = sheetData[i];
       const row = {};
       for (const k in rawRow) {
+        // Strip non-alphanumeric characters except spaces/underscores for ultra-flexible column matching
         row[k.toLowerCase().trim()] = rawRow[k];
       }
       
-      const name = row['name'] || row['customer name'] || row['customer'];
+      const name = row['name'] || row['customer name'] || row['customer'] || row['cust name'] || row['customer_name'] || row['party name'] || row['party_name'];
       if (!name) continue;
       
-      const phone = row['phone'] || row['mobile'] || row['phone number'] || '';
-      const email = row['email'] || '';
-      const address = row['address'] || '';
-      const gstin = row['gstin'] || row['gst'] || row['gst number'] || '';
-      const city = row['city'] || '';
-      const state = row['state'] || '';
-      const pincode = row['pincode'] || row['pin code'] || row['zip'] || '';
-      const balance = parseFloat(row['balance'] || row['opening balance'] || 0) || 0;
+      const phoneRaw = row['phone'] || row['mobile'] || row['phone number'] || row['mobile number'] || row['contact'] || row['phone_number'] || row['mobile_no'] || row['phone_no'] || '';
+      const emailRaw = row['email'] || row['email address'] || row['email_id'] || row['email_address'] || '';
+      const addressRaw = row['address'] || row['street address'] || row['customer address'] || row['full address'] || '';
+      const gstinRaw = row['gstin'] || row['gst'] || row['gst number'] || row['gst no'] || row['gst_number'] || row['gst_no'] || '';
+      const cityRaw = row['city'] || row['district'] || row['location'] || '';
+      const stateRaw = row['state'] || '';
+      const pincodeRaw = row['pincode'] || row['pin code'] || row['pin'] || row['zip'] || row['zipcode'] || row['postal code'] || '';
+      const balance = parseFloat(row['balance'] || row['opening balance'] || row['op balance'] || row['op_balance'] || row['due'] || row['current balance'] || 0) || 0;
       
-      await client.query(`
-        INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (phone) DO UPDATE SET
-          name = EXCLUDED.name,
-          email = EXCLUDED.email,
-          address = EXCLUDED.address,
-          gstin = EXCLUDED.gstin,
-          city = EXCLUDED.city,
-          state = EXCLUDED.state,
-          pincode = EXCLUDED.pincode,
-          balance = EXCLUDED.balance
-      `, [name.toString().trim(), phone.toString().trim(), email.toString().trim(), address.toString().trim(), gstin.toString().trim(), city.toString().trim(), state.toString().trim(), pincode.toString().trim(), balance]);
+      const nameStr = name.toString().trim();
+      const phoneStr = phoneRaw ? phoneRaw.toString().trim() : '';
+      const emailStr = emailRaw ? emailRaw.toString().trim() : '';
+      const addressStr = addressRaw ? addressRaw.toString().trim() : '';
+      const gstinStr = gstinRaw ? gstinRaw.toString().trim() : '';
+      const cityStr = cityRaw ? cityRaw.toString().trim() : 'Chennai';
+      const stateStr = stateRaw ? stateRaw.toString().trim() : 'Tamil Nadu';
+      const pincodeStr = pincodeRaw ? pincodeRaw.toString().trim() : '';
+
+      if (phoneStr) {
+        await client.query(`
+          INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ON CONFLICT (phone) DO UPDATE SET
+            name = EXCLUDED.name,
+            email = EXCLUDED.email,
+            address = EXCLUDED.address,
+            gstin = EXCLUDED.gstin,
+            city = EXCLUDED.city,
+            state = EXCLUDED.state,
+            pincode = EXCLUDED.pincode,
+            balance = EXCLUDED.balance
+        `, [nameStr, phoneStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance]);
+      } else {
+        // If phone is missing, match existing customer by name
+        const existing = await client.query('SELECT id FROM customers WHERE LOWER(name) = LOWER($1)', [nameStr]);
+        if (existing.rows.length > 0) {
+          await client.query(`
+            UPDATE customers SET email = $1, address = $2, gstin = $3, city = $4, state = $5, pincode = $6, balance = $7
+            WHERE id = $8
+          `, [emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance, existing.rows[0].id]);
+        } else {
+          await client.query(`
+            INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          `, [nameStr, '', emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance]);
+        }
+      }
       
       processedCount++;
     }

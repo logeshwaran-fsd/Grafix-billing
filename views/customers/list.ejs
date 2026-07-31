@@ -13,9 +13,30 @@
         <% } %>
       </form>
       <div class="btn-group">
+        <button type="button" class="btn btn-secondary" onclick="openCustImportModal()">Import Excel 👥</button>
         <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDeleteCustomers()">Delete Selected</button>
         <button type="button" class="btn btn-danger" style="background:#b91c1c; font-weight:600;" onclick="deleteAllCustomers()">Delete All 🗑️</button>
         <a href="/customers/add" class="btn btn-primary">+ Add Customer</a>
+      </div>
+    </div>
+
+    <!-- Customer Import Modal -->
+    <div id="cust-import-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+      <div style="background:var(--bg-card, #1e293b); color:#fff; border-radius:12px; padding:24px; max-width:480px; width:90%; border:1px solid var(--border, #334155); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin:0; font-size:18px;">👥 Import Customers from Excel</h3>
+          <button type="button" style="background:none; border:none; color:#aaa; font-size:20px; cursor:pointer;" onclick="closeCustImportModal()">✕</button>
+        </div>
+        <p style="font-size:13px; color:#94a3b8; margin-bottom:16px;">Upload an Excel file (.xlsx) with columns: <strong>Name, Phone, Email, Address, City, State, Pincode, GSTIN, Balance</strong></p>
+        <form action="/data/import/customers" method="POST" enctype="multipart/form-data">
+          <div style="margin-bottom:16px;">
+            <input type="file" name="file" class="form-control" accept=".xlsx" required style="width:100%;">
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" class="btn btn-secondary" onclick="closeCustImportModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Start Import 🚀</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -88,6 +109,16 @@
 </div>
 
 <script>
+  function openCustImportModal() {
+    const modal = document.getElementById('cust-import-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closeCustImportModal() {
+    const modal = document.getElementById('cust-import-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
   function toggleAllChecks(source) {
     const checkboxes = document.querySelectorAll('.customer-check');
     checkboxes.forEach(cb => cb.checked = source.checked);

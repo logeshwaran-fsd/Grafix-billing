@@ -19,16 +19,28 @@
 
       <!-- Import Card -->
       <div class="card">
-        <div class="card-header"><h3 class="card-title">Import Data from Excel / CSV</h3></div>
-        <p class="text-secondary mb-4 fs-sm">Upload Excel (.xlsx) files to batch insert products. Note: Existing items with matching codes will be updated.</p>
+        <div class="card-header"><h3 class="card-title">Import Data from Excel</h3></div>
+        <p class="text-secondary mb-4 fs-sm">Upload Excel (.xlsx) files to batch insert products or customers.</p>
         
-        <form action="/data/import/products" method="POST" enctype="multipart/form-data">
-          <div class="form-group">
-            <label for="import-file" class="fw-bold">Select Products Excel File (.xlsx)</label>
-            <input type="file" id="import-file" name="file" class="form-control" accept=".xlsx" required>
-          </div>
-          <button type="submit" class="btn btn-success btn-block mt-3">🚀 Start Import Process</button>
-        </form>
+        <div class="mb-4 pb-3" style="border-bottom: 1px solid var(--border, #334155);">
+          <form action="/data/import/products" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="import-file" class="fw-bold mb-1 d-block">Select Products Excel File (.xlsx)</label>
+              <input type="file" id="import-file" name="file" class="form-control" accept=".xlsx" required>
+            </div>
+            <button type="submit" class="btn btn-success btn-block mt-2">🚀 Import Products</button>
+          </form>
+        </div>
+
+        <div>
+          <form action="/data/import/customers" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="import-cust-file" class="fw-bold mb-1 d-block">Select Customers Excel File (.xlsx)</label>
+              <input type="file" id="import-cust-file" name="file" class="form-control" accept=".xlsx" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block mt-2">👥 Import Customers</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>
