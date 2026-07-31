@@ -256,6 +256,68 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     if (client) client.release();
     if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
   }
+  router.post('/import/customers', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    req.session.error = 'Please select a file';
+    return res.redirect('/data');
+  }
+  let client;
+  try {
+    const db = getDb();
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    
+    client = await db.connect();
+    await client.query('BEGIN');
+    
+    let processedCount = 0;
+    for (let i = 0; i < sheetData.length; i++) {
+      const rawRow = sheetData[i];
+      const row = {};
+      for (const k in rawRow) {
+        row[k.toLowerCase().trim()] = rawRow[k];
+      }
+      
+      const name = row['name'] || row['customer name'] || row['customer'];
+      if (!name) continue;
+      
+      const phone = row['phone'] || row['mobile'] || row['phone number'] || '';
+      const email = row['email'] || '';
+      const address = row['address'] || '';
+      const gstin = row['gstin'] || row['gst'] || row['gst number'] || '';
+      const city = row['city'] || '';
+      const state = row['state'] || '';
+      const pincode = row['pincode'] || row['pin code'] || row['zip'] || '';
+      const balance = parseFloat(row['balance'] || row['opening balance'] || 0) || 0;
+      
+      await client.query(`
+        INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (phone) DO UPDATE SET
+          name = EXCLUDED.name,
+          email = EXCLUDED.email,
+          address = EXCLUDED.address,
+          gstin = EXCLUDED.gstin,
+          city = EXCLUDED.city,
+          state = EXCLUDED.state,
+          pincode = EXCLUDED.pincode,
+          balance = EXCLUDED.balance
+      `, [name.toString().trim(), phone.toString().trim(), email.toString().trim(), address.toString().trim(), gstin.toString().trim(), city.toString().trim(), state.toString().trim(), pincode.toString().trim(), balance]);
+      
+      processedCount++;
+    }
+    
+    await client.query('COMMIT');
+    req.session.success = `Successfully imported ${processedCount} customers!`;
+  } catch (err) {
+    if (client) await client.query('ROLLBACK');
+    console.error(err);
+    req.session.error = 'Failed to import customers: ' + err.message;
+  } finally {
+    if (client) client.release();
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+  }
   res.redirect('/data');
 });
 
