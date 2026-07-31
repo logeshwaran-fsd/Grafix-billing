@@ -248,15 +248,19 @@ router.post('/import/products', upload.single('file'), async (req, res) => {
     
     await client.query('COMMIT');
     req.session.success = `Successfully processed ${processedCount} valid products out of ${sheetData.length} rows!`;
+    res.redirect('/data');
   } catch (err) {
     if (client) await client.query('ROLLBACK');
     console.error(err);
     req.session.error = 'Failed to import products: ' + err.message;
+    res.redirect('/data');
   } finally {
     if (client) client.release();
     if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
   }
-  router.post('/import/customers', upload.single('file'), async (req, res) => {
+});
+
+router.post('/import/customers', upload.single('file'), async (req, res) => {
   if (!req.file) {
     req.session.error = 'Please select a file';
     return res.redirect('/data');
