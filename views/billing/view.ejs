@@ -38,26 +38,28 @@
 
     <style>
       @media print {
-        @page { size: A6 portrait; margin: 1px 1px 1px 1px; }
+        @page { size: A6 portrait; margin: 0mm 0mm 0mm 0mm; }
         body, .invoice-print-area { font-family: Arial, sans-serif !important; font-stretch: normal !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
-        #invoice-card { padding: 2px !important; max-width: 100% !important; border: none !important; border-radius: 0 !important; font-size: 8px !important; color: #000 !important; }
+        #invoice-card { padding: 4px 8px 4px 4px !important; max-width: 100% !important; border: none !important; border-radius: 0 !important; font-size: 7.5px !important; color: #000 !important; box-sizing: border-box !important; }
         .invoice-print-area table { margin-bottom: 4px !important; width: 100% !important; table-layout: fixed !important; }
-        .invoice-print-area table th, .invoice-print-area table td { padding: 1.5px 1px !important; font-size: 8px !important; white-space: nowrap !important; line-height: 1.1 !important; }
-        .invoice-print-area table th:nth-child(1), .invoice-print-area table td:nth-child(1) { width: 12px !important; padding-right: 0 !important; text-align: left !important; }
-        .invoice-print-area table th:nth-child(2), .invoice-print-area table td:nth-child(2) { width: auto !important; overflow: hidden !important; text-overflow: ellipsis !important; padding-left: 1px !important; text-align: left !important; }
-        .invoice-print-area table th:nth-child(3), .invoice-print-area table td:nth-child(3) { width: 18px !important; text-align: center !important; }
-        .invoice-print-area table th:nth-child(4), .invoice-print-area table td:nth-child(4) { width: 40px !important; text-align: right !important; }
-        .invoice-print-area table th:nth-child(5), .invoice-print-area table td:nth-child(5) { width: 32px !important; text-align: right !important; }
+        .invoice-print-area table th, .invoice-print-area table td { padding: 1px 0.5px !important; font-size: 7.5px !important; white-space: nowrap !important; line-height: 1.1 !important; }
+        .invoice-print-area table th:nth-child(1), .invoice-print-area table td:nth-child(1) { width: 10px !important; padding-right: 0 !important; text-align: left !important; }
+        .invoice-print-area table th:nth-child(2), .invoice-print-area table td:nth-child(2) { width: 82px !important; overflow: hidden !important; text-overflow: ellipsis !important; padding-left: 1px !important; text-align: left !important; }
+        .invoice-print-area table th:nth-child(3), .invoice-print-area table td:nth-child(3) { width: 16px !important; text-align: center !important; }
+        .invoice-print-area table th:nth-child(4), .invoice-print-area table td:nth-child(4) { width: 38px !important; text-align: right !important; }
+        .invoice-print-area table th:nth-child(5), .invoice-print-area table td:nth-child(5) { width: 30px !important; text-align: right !important; }
         <% if (!isEst) { %>
-          .invoice-print-area table th:nth-child(6), .invoice-print-area table td:nth-child(6) { width: 22px !important; text-align: center !important; }
-          .invoice-print-area table th:nth-child(7), .invoice-print-area table td:nth-child(7) { width: 44px !important; text-align: right !important; }
+          .invoice-print-area table th:nth-child(6), .invoice-print-area table td:nth-child(6) { width: 20px !important; text-align: center !important; }
+          .invoice-print-area table th:nth-child(7), .invoice-print-area table td:nth-child(7) { width: 40px !important; text-align: right !important; }
         <% } else { %>
-          .invoice-print-area table th:nth-child(6), .invoice-print-area table td:nth-child(6) { width: 44px !important; text-align: right !important; }
+          .invoice-print-area table th:nth-child(6), .invoice-print-area table td:nth-child(6) { width: 40px !important; text-align: right !important; }
         <% } %>
-        .invoice-print-area h1 { font-size: 13px !important; margin-bottom: 1px !important; margin-top: 0 !important; }
-        .invoice-print-area p { margin-bottom: 1px !important; font-size: 8px !important; line-height: 1.1 !important; color: #000 !important; }
-        .invoice-print-area img { max-height: 25px !important; margin-bottom: 2px !important; }
+        .invoice-print-area h1 { font-size: 12px !important; margin-bottom: 1px !important; margin-top: 0 !important; }
+        .invoice-print-area p { margin-bottom: 1px !important; font-size: 7.5px !important; line-height: 1.1 !important; color: #000 !important; }
+        .invoice-print-area img { max-height: 22px !important; margin-bottom: 2px !important; }
         .invoice-print-area div { margin-top: 0 !important; }
+        .invoice-print-area div[style*="min-width"] { min-width: 140px !important; width: 140px !important; }
+        .invoice-print-area div[style*="max-width: 250px"], .invoice-print-area div[style*="max-width:250px"] { max-width: 140px !important; }
       }
       
       /* Single-Page A6 PDF Export Mode */
