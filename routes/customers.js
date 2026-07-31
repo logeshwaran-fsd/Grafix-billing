@@ -123,4 +123,42 @@ router.post('/delete/:id', async (req, res) => {
   res.redirect('/customers');
 });
 
+router.post('/bulk-delete', async (req, res) => {
+  let ids = req.body.customer_ids;
+  if (!ids) return res.redirect('/customers');
+  if (typeof ids === 'string') {
+    try { ids = JSON.parse(ids); } catch(e) { ids = [ids]; }
+  }
+  if (!Array.isArray(ids)) ids = [ids];
+  if (ids.length === 0) return res.redirect('/customers');
+  try {
+    const placeholders = ids.map((_, i) => '$' + (i + 1)).join(',');
+    const result = await getDb().query(
+      `DELETE FROM customers 
+       WHERE id IN (${placeholders}) 
+       AND id NOT IN (SELECT DISTINCT customer_id FROM invoices WHERE customer_id IS NOT NULL)`,
+      ids
+    );
+    req.session.success = `${result.rowCount} customer(s) deleted successfully!`;
+  } catch (err) {
+    console.error(err);
+    req.session.error = 'Failed to delete selected customers';
+  }
+  res.redirect('/customers');
+});
+
+router.post('/delete-all', async (req, res) => {
+  try {
+    const result = await getDb().query(
+      `DELETE FROM customers 
+       WHERE id NOT IN (SELECT DISTINCT customer_id FROM invoices WHERE customer_id IS NOT NULL)`
+    );
+    req.session.success = `All unused customers (${result.rowCount}) deleted successfully!`;
+  } catch (err) {
+    console.error(err);
+    req.session.error = 'Failed to delete all customers';
+  }
+  res.redirect('/customers');
+});
+
 module.exports = router;

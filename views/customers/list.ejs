@@ -12,7 +12,11 @@
           <a href="/customers" class="btn btn-secondary">Clear</a>
         <% } %>
       </form>
-      <a href="/customers/add" class="btn btn-primary">+ Add Customer</a>
+      <div class="btn-group">
+        <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDeleteCustomers()">Delete Selected</button>
+        <button type="button" class="btn btn-danger" style="background:#b91c1c; font-weight:600;" onclick="deleteAllCustomers()">Delete All 🗑️</button>
+        <a href="/customers/add" class="btn btn-primary">+ Add Customer</a>
+      </div>
     </div>
 
     <div class="card">
@@ -20,6 +24,7 @@
         <table>
           <thead>
             <tr>
+              <th style="width:40px;"><input type="checkbox" id="check-all" onclick="toggleAllChecks(this)"></th>
               <th>Name</th>
               <th>Phone</th>
               <th>Email</th>
@@ -31,10 +36,11 @@
           </thead>
           <tbody>
             <% if (customers.length === 0) { %>
-              <tr><td colspan="7" class="table-empty">No customers found</td></tr>
+              <tr><td colspan="8" class="table-empty">No customers found</td></tr>
             <% } %>
             <% customers.forEach(cust => { %>
               <tr>
+                <td><input type="checkbox" class="customer-check" value="<%= cust.id %>" onclick="updateBulkButtons()"></td>
                 <td class="fw-bold"><%= cust.name %></td>
                 <td><%= cust.phone || '-' %></td>
                 <td><%= cust.email || '-' %></td>
@@ -80,4 +86,53 @@
     </div>
   </div>
 </div>
+
+<script>
+  function toggleAllChecks(source) {
+    const checkboxes = document.querySelectorAll('.customer-check');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateBulkButtons();
+  }
+
+  function updateBulkButtons() {
+    const checkboxes = document.querySelectorAll('.customer-check:checked');
+    const btnDelete = document.getElementById('btn-bulk-delete');
+    if (btnDelete) btnDelete.disabled = checkboxes.length === 0;
+  }
+
+  function getSelectedIds() {
+    const checkboxes = document.querySelectorAll('.customer-check:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+  }
+
+  function bulkDeleteCustomers() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    if (confirm('Are you sure you want to delete ' + ids.length + ' selected customers?')) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/customers/bulk-delete';
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'customer_ids';
+      input.value = JSON.stringify(ids);
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    }
+  }
+
+  function deleteAllCustomers() {
+    const confirmText = prompt('⚠️ DANGER: This will delete ALL customers in your database!\n\nType "DELETE ALL" to confirm:');
+    if (confirmText === 'DELETE ALL') {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/customers/delete-all';
+      document.body.appendChild(form);
+      form.submit();
+    } else if (confirmText !== null) {
+      alert('Action cancelled: You must type "DELETE ALL" exactly to confirm deletion.');
+    }
+  }
+</script>
 <%- include('../partials/footer') %>
