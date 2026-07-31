@@ -274,13 +274,25 @@ router.post('/import/customers', upload.single('file'), async (req, res) => {
     
     client = await db.connect();
     await client.query('BEGIN');
+
+    // 1. Pre-load existing customers into in-memory maps for 0ms instant lookup
+    const existingRes = await client.query('SELECT id, phone, LOWER(name) as lower_name FROM customers');
+    const existingPhoneMap = new Map();
+    const existingNameMap = new Map();
+    existingRes.rows.forEach(c => {
+      if (c.phone && c.phone.trim()) existingPhoneMap.set(c.phone.trim(), c.id);
+      if (c.lower_name) existingNameMap.set(c.lower_name.trim(), c.id);
+    });
     
     let processedCount = 0;
+    const BATCH_SIZE = 500;
+    let batchValues = [];
+    let batchParams = [];
+
     for (let i = 0; i < sheetData.length; i++) {
       const rawRow = sheetData[i];
       const row = {};
       for (const k in rawRow) {
-        // Strip non-alphanumeric characters except spaces/underscores for ultra-flexible column matching
         row[k.toLowerCase().trim()] = rawRow[k];
       }
       
@@ -305,40 +317,56 @@ router.post('/import/customers', upload.single('file'), async (req, res) => {
       const stateStr = stateRaw ? stateRaw.toString().trim() : 'Tamil Nadu';
       const pincodeStr = pincodeRaw ? pincodeRaw.toString().trim() : '';
 
-      if (phoneStr) {
-        const existing = await client.query('SELECT id FROM customers WHERE phone = $1', [phoneStr]);
-        if (existing.rows.length > 0) {
-          await client.query(`
-            UPDATE customers SET name = $1, email = $2, address = $3, gstin = $4, city = $5, state = $6, pincode = $7, balance = $8
-            WHERE id = $9
-          `, [nameStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance, existing.rows[0].id]);
-        } else {
-          await client.query(`
-            INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          `, [nameStr, phoneStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance]);
-        }
-      } else {
-        // If phone is missing, match existing customer by name
-        const existing = await client.query('SELECT id FROM customers WHERE LOWER(name) = LOWER($1)', [nameStr]);
-        if (existing.rows.length > 0) {
-          await client.query(`
-            UPDATE customers SET email = $1, address = $2, gstin = $3, city = $4, state = $5, pincode = $6, balance = $7
-            WHERE id = $8
-          `, [emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance, existing.rows[0].id]);
-        } else {
-          await client.query(`
-            INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          `, [nameStr, '', emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance]);
-        }
+      let existingId = null;
+      if (phoneStr && existingPhoneMap.has(phoneStr)) {
+        existingId = existingPhoneMap.get(phoneStr);
+      } else if (existingNameMap.has(nameStr.toLowerCase())) {
+        existingId = existingNameMap.get(nameStr.toLowerCase());
       }
-      
+
+      if (existingId) {
+        // Instant update for existing customer
+        await client.query(`
+          UPDATE customers 
+          SET name = $1, phone = $2, email = $3, address = $4, gstin = $5, city = $6, state = $7, pincode = $8, balance = $9
+          WHERE id = $10
+        `, [nameStr, phoneStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance, existingId]);
+      } else {
+        // Bulk batch new insert
+        const offset = batchValues.length;
+        batchParams.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9})`);
+        batchValues.push(nameStr, phoneStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance);
+
+        // Update in-memory maps to handle duplicates within the same sheet
+        if (phoneStr) existingPhoneMap.set(phoneStr, true);
+        existingNameMap.set(nameStr.toLowerCase(), true);
+      }
+
       processedCount++;
+
+      // Flush batch insert chunk of 500
+      if (batchParams.length >= BATCH_SIZE * 9) {
+        const batchQuery = `
+          INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
+          VALUES ${batchParams.join(', ')}
+        `;
+        await client.query(batchQuery, batchValues);
+        batchValues = [];
+        batchParams = [];
+      }
+    }
+
+    // Flush remaining inserts
+    if (batchParams.length > 0) {
+      const batchQuery = `
+        INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
+        VALUES ${batchParams.join(', ')}
+      `;
+      await client.query(batchQuery, batchValues);
     }
     
     await client.query('COMMIT');
-    req.session.success = `Successfully imported ${processedCount} customers!`;
+    req.session.success = `Successfully processed ${processedCount} valid customers out of ${sheetData.length} rows!`;
   } catch (err) {
     if (client) await client.query('ROLLBACK');
     console.error(err);
