@@ -18,10 +18,24 @@ router.get('/', async (req, res) => {
     if (search) {
       const trimmed = search.trim();
       const padded = /^\d+$/.test(trimmed) ? trimmed.padStart(3, '0') : trimmed;
-      query += ` AND (p.name ILIKE $${paramIndex} OR p.code ILIKE $${paramIndex} OR LTRIM(p.code, '0') ILIKE $${paramIndex+1} OR p.code ILIKE $${paramIndex+2})`;
-      params.push(`%${trimmed}%`, `${trimmed}%`, `${padded}%`);
-      paramIndex += 3;
+      const terms = trimmed.split(/\s+/).filter(Boolean);
+
+      if (terms.length === 1) {
+        const term = terms[0];
+        query += ` AND (p.name ILIKE $${paramIndex} OR p.code ILIKE $${paramIndex} OR LTRIM(p.code, '0') ILIKE $${paramIndex+1} OR p.code ILIKE $${paramIndex+2})`;
+        params.push(`%${term}%`, `${term}%`, `${padded}%`);
+        paramIndex += 3;
+      } else {
+        const termConds = [];
+        for (const t of terms) {
+          termConds.push(`(p.name ILIKE $${paramIndex} OR p.code ILIKE $${paramIndex})`);
+          params.push(`%${t}%`);
+          paramIndex++;
+        }
+        query += ` AND (${termConds.join(' AND ')})`;
+      }
     }
+
     if (category) {
       if (category === 'unbranded') {
         query += ` AND p.category_id IS NULL`;
@@ -70,29 +84,57 @@ router.get('/api/search', async (req, res) => {
   try {
     const db = getDb();
     const paddedQ = /^\d+$/.test(rawQ) ? rawQ.padStart(3, '0') : rawQ;
-    const searchPattern = `%${rawQ}%`;
-    const resDb = await db.query(`
-      SELECT id, code, name, unit_price, stock_quantity, branch_stocks, gst_rate 
-      FROM products 
-      WHERE is_active = 1 AND (
-        name ILIKE $1 OR 
-        code ILIKE $1 OR 
-        LTRIM(code, '0') ILIKE $2 OR
-        code ILIKE $3
-      )
+    const terms = rawQ.split(/\s+/).filter(Boolean);
+    
+    let whereClauses = ['p.is_active = 1'];
+    let params = [];
+    let pIdx = 1;
+    
+    if (terms.length === 1) {
+      const term = terms[0];
+      const termPattern = `%${term}%`;
+      whereClauses.push(`(
+        p.name ILIKE $${pIdx} OR 
+        p.code ILIKE $${pIdx} OR 
+        LTRIM(p.code, '0') ILIKE $${pIdx+1} OR 
+        p.code ILIKE $${pIdx+2}
+      )`);
+      params.push(termPattern, `${term}%`, `${paddedQ}%`);
+      pIdx += 3;
+    } else {
+      const termConditions = [];
+      for (const t of terms) {
+        termConditions.push(`(p.name ILIKE $${pIdx} OR p.code ILIKE $${pIdx})`);
+        params.push(`%${t}%`);
+        pIdx++;
+      }
+      whereClauses.push(`(${termConditions.join(' AND ')})`);
+    }
+
+    params.push(rawQ, paddedQ);
+    const orderRawIdx = pIdx++;
+    const orderPaddedIdx = pIdx++;
+
+    const query = `
+      SELECT p.id, p.code, p.name, p.unit_price, p.stock_quantity, p.branch_stocks, p.gst_rate 
+      FROM products p
+      WHERE ${whereClauses.join(' AND ')}
       ORDER BY 
         CASE 
-          WHEN code = $4 THEN 0
-          WHEN code = $5 THEN 1
-          WHEN LTRIM(code, '0') = $4 THEN 2
-          WHEN code ILIKE $6 THEN 3
+          WHEN p.code = $${orderRawIdx} THEN 0
+          WHEN p.code = $${orderPaddedIdx} THEN 1
+          WHEN LTRIM(p.code, '0') = $${orderRawIdx} THEN 2
+          WHEN p.name ILIKE $${orderRawIdx} THEN 3
           ELSE 4
         END,
-        CASE WHEN code ~ '^[0-9]+$' THEN LPAD(code, 10, '0') ELSE code END ASC
-      LIMIT 20
-    `, [searchPattern, `${rawQ}%`, `${paddedQ}%`, rawQ, paddedQ, `${rawQ}%`]);
+        CASE WHEN p.code ~ '^[0-9]+$' THEN LPAD(p.code, 10, '0') ELSE p.code END ASC
+      LIMIT 25
+    `;
+
+    const resDb = await db.query(query, params);
     res.json(resDb.rows);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
