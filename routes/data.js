@@ -319,9 +319,11 @@ router.post('/import/customers', upload.single('file'), async (req, res) => {
 
       let existingId = null;
       if (phoneStr && existingPhoneMap.has(phoneStr)) {
-        existingId = existingPhoneMap.get(phoneStr);
+        const val = existingPhoneMap.get(phoneStr);
+        if (typeof val === 'number') existingId = val;
       } else if (existingNameMap.has(nameStr.toLowerCase())) {
-        existingId = existingNameMap.get(nameStr.toLowerCase());
+        const val = existingNameMap.get(nameStr.toLowerCase());
+        if (typeof val === 'number') existingId = val;
       }
 
       if (existingId) {
@@ -338,14 +340,14 @@ router.post('/import/customers', upload.single('file'), async (req, res) => {
         batchValues.push(nameStr, phoneStr, emailStr, addressStr, gstinStr, cityStr, stateStr, pincodeStr, balance);
 
         // Update in-memory maps to handle duplicates within the same sheet
-        if (phoneStr) existingPhoneMap.set(phoneStr, true);
-        existingNameMap.set(nameStr.toLowerCase(), true);
+        if (phoneStr) existingPhoneMap.set(phoneStr, 'seen');
+        existingNameMap.set(nameStr.toLowerCase(), 'seen');
       }
 
       processedCount++;
 
       // Flush batch insert chunk of 500
-      if (batchParams.length >= BATCH_SIZE * 9) {
+      if (batchParams.length >= BATCH_SIZE) {
         const batchQuery = `
           INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance)
           VALUES ${batchParams.join(', ')}
