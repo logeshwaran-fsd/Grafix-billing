@@ -6,6 +6,9 @@ router.get('/', async (req, res) => {
   const search = req.query.search || '';
   try {
     const db = getDb();
+    const branchesRes = await db.query('SELECT name FROM branches ORDER BY name ASC');
+    const branches = branchesRes.rows.map(b => b.name);
+
     let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1';
     const params = [];
     let paramIndex = 1;
@@ -28,7 +31,7 @@ router.get('/', async (req, res) => {
     `);
     const stats = statsRes.rows[0];
 
-    res.render('inventory/stock', { pageTitle: 'Stock Overview', activePage: 'inventory', products, stats, search });
+    res.render('inventory/stock', { pageTitle: 'Stock Overview', activePage: 'inventory', products, stats, search, branches });
   } catch (err) {
     res.status(500).render('error', { pageTitle: 'Error', message: 'Failed to load stock data', activePage: 'inventory' });
   }

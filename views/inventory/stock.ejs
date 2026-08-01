@@ -42,7 +42,12 @@
               <th>Code</th>
               <th>Product Name</th>
               <th>Category</th>
-              <th>Current Stock</th>
+              <th>Total Stock</th>
+              <% if (typeof branches !== 'undefined') { %>
+                <% branches.forEach(b => { %>
+                  <th><%= b %> Stock</th>
+                <% }) %>
+              <% } %>
               <th>Reorder Level</th>
               <th>Unit</th>
               <th>Status</th>
@@ -51,14 +56,23 @@
           </thead>
           <tbody>
             <% if (products.length === 0) { %>
-              <tr><td colspan="8" class="table-empty">No products found</td></tr>
+              <tr><td colspan="<%= 7 + (typeof branches !== 'undefined' ? branches.length : 0) %>" class="table-empty">No products found</td></tr>
             <% } %>
             <% products.forEach(prod => { %>
               <tr data-id="<%= prod.id %>">
                 <td><span class="badge badge-default"><%= prod.code %></span></td>
                 <td class="fw-bold"><%= prod.name %></td>
                 <td><%= prod.category_name || 'Uncategorized' %></td>
-                <td><strong class="fs-lg stock-qty-value"><%= prod.stock_quantity %></strong></td>
+                <td><strong class="fs-lg stock-qty-value" style="color:var(--accent);"><%= prod.stock_quantity %></strong></td>
+                <% if (typeof branches !== 'undefined') { %>
+                  <% branches.forEach(b => { %>
+                    <td>
+                      <span class="badge badge-default" style="background:#334155; color:#f8fafc; font-size:12px;">
+                        <%= (prod.branch_stocks && prod.branch_stocks[b] !== undefined) ? prod.branch_stocks[b] : 0 %>
+                      </span>
+                    </td>
+                  <% }) %>
+                <% } %>
                 <td><%= prod.reorder_level %></td>
                 <td><%= prod.unit %></td>
                 <td>

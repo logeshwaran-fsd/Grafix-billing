@@ -91,6 +91,11 @@ async function initialize() {
       await database.query("ALTER TABLE customers ADD COLUMN phone_02 TEXT");
     } catch (err) {}
 
+    // Migration: Seed default branches Parrys and Ambattur
+    try {
+      await database.query("INSERT INTO branches (name) VALUES ('Parrys'), ('Ambattur') ON CONFLICT (name) DO NOTHING");
+    } catch (err) {}
+
   } catch (err) {
     console.error('Database initialization error:', err);
   }
