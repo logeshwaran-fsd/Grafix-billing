@@ -4,19 +4,22 @@
   <%- include('../partials/header', { pageTitle: 'Sales Reports' }) %>
   <%- include('../partials/alerts') %>
   <div class="content-area">
-    <div class="mb-4 d-flex justify-between align-center">
+    <div class="mb-4 d-flex justify-between align-center" style="flex-wrap:wrap; gap:12px;">
       <a href="/reports" class="btn btn-secondary btn-sm">← Back to Reports</a>
-      <form action="/reports/sales" method="GET" class="form-inline">
-        <div class="form-group">
-          <label class="small text-secondary">From Date</label>
-          <input type="date" name="from" class="form-control" value="<%= from %>">
-        </div>
-        <div class="form-group">
-          <label class="small text-secondary">To Date</label>
-          <input type="date" name="to" class="form-control" value="<%= to %>">
-        </div>
-        <button type="submit" class="btn btn-primary" style="margin-top:20px;">Run Report</button>
-      </form>
+      <div class="d-flex align-center gap-2" style="flex-wrap:wrap;">
+        <form action="/reports/sales" method="GET" class="form-inline" style="margin:0;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="small text-secondary" style="margin-bottom:2px;">From</label>
+            <input type="date" name="from" class="form-control" value="<%= from %>">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="small text-secondary" style="margin-bottom:2px;">To</label>
+            <input type="date" name="to" class="form-control" value="<%= to %>">
+          </div>
+          <button type="submit" class="btn btn-primary">Run Report</button>
+        </form>
+        <a href="/reports/export/sales?from=<%= from %>&to=<%= to %>" class="btn btn-success" style="background:#10b981; border:none; padding:10px 16px; font-weight:600;">Download Excel 📊</a>
+      </div>
     </div>
 
     <div class="grid grid-3" style="margin-bottom:24px;">
