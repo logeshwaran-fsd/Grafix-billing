@@ -397,7 +397,8 @@ router.post('/:id/edit', async (req, res) => {
       
       const final_amount_paid = amount_paid !== undefined ? parseFloat(amount_paid) : (payment_status === 'paid' ? net_payable : 0);
 
-      const parsedDate = invoice_date ? new Date(invoice_date) : new Date();
+      // Only update the date if explicitly provided in the request; otherwise keep the original invoice date
+      const parsedDate = invoice_date ? new Date(invoice_date) : oldInvoice.created_at;
       // 4. APPLY new invoice
       await client.query(`
         UPDATE invoices SET customer_id=$1, user_id=$2, subtotal=$3, tax_amount=$4, discount_amount=$5, total_amount=$6, payment_method=$7, payment_status=$8, courier_charges=$9, invoice_type=$10, branch=$11, amount_paid=$12, created_at=$14
