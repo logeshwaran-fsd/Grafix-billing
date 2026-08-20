@@ -113,17 +113,17 @@ router.post('/api/adjust/:id', async (req, res) => {
     if (branch) {
       await client.query(`
         UPDATE products 
-        SET stock_quantity = COALESCE(stock_quantity, 0) + $1,
+        SET stock_quantity = COALESCE(stock_quantity, 0) + $1::numeric,
             branch_stocks = jsonb_set(
               COALESCE(branch_stocks, '{}'::jsonb), 
-              ARRAY[$2], 
-              to_jsonb(COALESCE((COALESCE(branch_stocks, '{}'::jsonb)->>$2)::numeric, 0) + $1),
+              ARRAY[$2::text], 
+              to_jsonb(COALESCE((COALESCE(branch_stocks, '{}'::jsonb)->>$2::text)::numeric, 0) + $1::numeric),
               true
             )
-        WHERE id = $3
+        WHERE id = $3::integer
       `, [change, branch, req.params.id]);
     } else {
-      await client.query('UPDATE products SET stock_quantity = COALESCE(stock_quantity, 0) + $1 WHERE id = $2', [change, req.params.id]);
+      await client.query('UPDATE products SET stock_quantity = COALESCE(stock_quantity, 0) + $1::numeric WHERE id = $2::integer', [change, req.params.id]);
     }
     await client.query(`
       INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
