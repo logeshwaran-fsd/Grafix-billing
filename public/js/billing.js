@@ -505,9 +505,10 @@ async function submitInvoice() {
     return;
   }
 
+  const isEditing = typeof EDIT_INVOICE_ID !== 'undefined' && EDIT_INVOICE_ID;
+  const dateInputEl = document.getElementById('invoice-date');
   const data = {
     customer_id: document.getElementById('customer-id').value || null,
-    invoice_date: document.getElementById('invoice-date') ? document.getElementById('invoice-date').value : new Date().toISOString().split('T')[0],
     payment_method: document.getElementById('payment-method').value,
     payment_status: document.getElementById('payment-status').value,
     courier_charges: document.getElementById('courier-charges') ? (parseFloat(document.getElementById('courier-charges').value) || 0) : 0,
@@ -518,12 +519,15 @@ async function submitInvoice() {
     apply_wallet: document.getElementById('apply-wallet') ? document.getElementById('apply-wallet').checked : false,
     items: invoiceItems
   };
+  // Only include invoice_date for NEW invoices. For edits, omit it so the server preserves the original date.
+  if (!isEditing) {
+    data.invoice_date = dateInputEl ? dateInputEl.value : new Date().toISOString().split('T')[0];
+  }
 
   const btn = document.getElementById('submit-invoice-btn');
   btn.disabled = true;
   btn.textContent = 'Processing...';
 
-  const isEditing = typeof EDIT_INVOICE_ID !== 'undefined' && EDIT_INVOICE_ID;
   const url = isEditing ? `/billing/${EDIT_INVOICE_ID}/edit` : '/billing/create';
 
   try {
