@@ -8,6 +8,25 @@
       <span class="text-secondary" style="font-size:13px; font-weight:600;">Total Transactions: <%= pagination.totalCount %></span>
     </div>
 
+    <!-- Quick Filter Tabs -->
+    <div class="d-flex gap-2 mb-3" style="flex-wrap:wrap;">
+      <a href="/inventory/transactions" class="btn <%= !selectedType ? 'btn-primary' : 'btn-secondary' %> btn-sm" style="padding:6px 14px; font-weight:600; border-radius:20px;">
+        All Transactions (<%= (typeof typeCounts !== 'undefined' && typeCounts.all_count) ? typeCounts.all_count : pagination.totalCount %>)
+      </a>
+      <a href="/inventory/transactions?type=adjustment" class="btn <%= selectedType === 'adjustment' ? 'btn-warning' : 'btn-secondary' %> btn-sm" style="padding:6px 14px; font-weight:700; border-radius:20px; <%= selectedType === 'adjustment' ? 'background:#f59e0b; color:#fff;' : '' %>">
+        Manual Adjustments (<%= (typeof typeCounts !== 'undefined' && typeCounts.adjustment_count) ? typeCounts.adjustment_count : 0 %>)
+      </a>
+      <a href="/inventory/transactions?type=purchase" class="btn <%= selectedType === 'purchase' ? 'btn-success' : 'btn-secondary' %> btn-sm" style="padding:6px 14px; font-weight:600; border-radius:20px;">
+        Quick Adds & Purchases (<%= (typeof typeCounts !== 'undefined' && typeCounts.purchase_count) ? typeCounts.purchase_count : 0 %>)
+      </a>
+      <a href="/inventory/transactions?type=sale" class="btn <%= selectedType === 'sale' ? 'btn-info' : 'btn-secondary' %> btn-sm" style="padding:6px 14px; font-weight:600; border-radius:20px;">
+        Sales Deductions (<%= (typeof typeCounts !== 'undefined' && typeCounts.sale_count) ? typeCounts.sale_count : 0 %>)
+      </a>
+      <a href="/inventory/transactions?type=return" class="btn <%= selectedType === 'return' ? 'btn-primary' : 'btn-secondary' %> btn-sm" style="padding:6px 14px; font-weight:600; border-radius:20px;">
+        Returns & Reversals (<%= (typeof typeCounts !== 'undefined' && typeCounts.return_count) ? typeCounts.return_count : 0 %>)
+      </a>
+    </div>
+
     <!-- Filter Bar -->
     <div class="card mb-3" style="padding:14px 16px;">
       <form method="GET" action="/inventory/transactions" class="d-flex gap-2 align-center flex-wrap">
@@ -15,15 +34,15 @@
           <input type="text" name="search" class="form-control" placeholder="Search by Product Name, Code, or Notes..." value="<%= search %>">
         </div>
         <div style="width:160px;">
-          <select name="type" class="form-control">
+          <select name="type" class="form-control" onchange="this.form.submit()">
             <option value="">All Types</option>
+            <option value="adjustment" <%= selectedType === 'adjustment' ? 'selected' : '' %>>Manual Adjustment</option>
+            <option value="purchase" <%= selectedType === 'purchase' ? 'selected' : '' %>>Purchase / Quick Add</option>
             <option value="sale" <%= selectedType === 'sale' ? 'selected' : '' %>>Sale</option>
-            <option value="purchase" <%= selectedType === 'purchase' ? 'selected' : '' %>>Purchase / Add</option>
-            <option value="adjustment" <%= selectedType === 'adjustment' ? 'selected' : '' %>>Adjustment</option>
             <option value="return" <%= selectedType === 'return' ? 'selected' : '' %>>Return</option>
           </select>
         </div>
-        <button type="submit" class="btn btn-primary" style="padding:8px 18px; font-weight:600;">Filter</button>
+        <button type="submit" class="btn btn-primary" style="padding:8px 18px; font-weight:600;">Search</button>
         <% if (search || selectedType) { %>
           <a href="/inventory/transactions" class="btn btn-secondary">Reset</a>
         <% } %>

@@ -213,6 +213,17 @@ router.get('/transactions', async (req, res) => {
       LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `, params);
 
+    const countsRes = await db.query(`
+      SELECT 
+        COUNT(*) as all_count,
+        COUNT(CASE WHEN type = 'adjustment' THEN 1 END) as adjustment_count,
+        COUNT(CASE WHEN type = 'purchase' THEN 1 END) as purchase_count,
+        COUNT(CASE WHEN type = 'sale' THEN 1 END) as sale_count,
+        COUNT(CASE WHEN type = 'return' THEN 1 END) as return_count
+      FROM stock_transactions
+    `);
+    const typeCounts = countsRes.rows[0];
+
     const transactions = transactionsRes.rows;
     res.render('inventory/transactions', { 
       pageTitle: 'Stock Transaction History', 
@@ -220,6 +231,7 @@ router.get('/transactions', async (req, res) => {
       transactions,
       search,
       selectedType: type,
+      typeCounts,
       pagination: { page, totalPages, totalCount }
     });
   } catch (err) {
