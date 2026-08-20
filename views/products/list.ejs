@@ -4,26 +4,26 @@
   <%- include('../partials/header', { pageTitle: 'Products' }) %>
   <%- include('../partials/alerts') %>
   <div class="content-area">
-    <div class="mb-3 d-flex justify-between align-center" style="flex-wrap: wrap; gap: 12px;">
-      <form action="/products" method="GET" class="form-inline flex-grow-1" style="max-width:600px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <input type="text" name="search" class="form-control" placeholder="Search code, name..." value="<%= search %>" style="max-width:200px;">
-        <select name="category" class="form-control" style="max-width:200px;">
+    <div class="mb-3 d-flex justify-between align-center" style="gap: 12px;">
+      <form action="/products" method="GET" class="form-inline" style="display:flex; gap:8px; align-items:center; margin:0;">
+        <input type="text" name="search" class="form-control" placeholder="Search code, name..." value="<%= search %>" style="width:200px; height:38px;">
+        <select name="category" class="form-control" style="width:180px; height:38px;">
           <option value="">All Brands</option>
           <option value="unbranded" <%= selectedCategory === 'unbranded' ? 'selected' : '' %>>Unbranded</option>
           <% categories.forEach(cat => { %>
             <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
           <% }) %>
         </select>
-        <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Filter</button>
+        <button type="submit" class="btn btn-primary" style="height:38px; padding:0 16px; white-space:nowrap;">Filter</button>
         <% if (search || selectedCategory) { %>
-          <a href="/products" class="btn btn-secondary" style="padding: 8px 16px;">Clear</a>
+          <a href="/products" class="btn btn-secondary" style="height:38px; padding:0 16px; display:inline-flex; align-items:center; white-space:nowrap;">Clear</a>
         <% } %>
       </form>
-      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-secondary" id="btn-bulk-edit" disabled onclick="openBulkEditModal()" style="padding:8px 14px;">Edit Selected</button>
-        <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDelete()" style="padding:8px 14px;">Delete Selected</button>
-        <button type="button" class="btn btn-danger" style="background:#b91c1c; font-weight:600; padding:8px 14px;" onclick="deleteAllProducts()">Delete All 🗑️</button>
-        <a href="/products/add" class="btn btn-primary" style="padding:8px 16px;">+ Add Product</a>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button type="button" class="btn btn-secondary" id="btn-bulk-edit" disabled onclick="openBulkEditModal()" style="height:38px; padding:0 14px; white-space:nowrap;">Edit Selected</button>
+        <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDelete()" style="height:38px; padding:0 14px; white-space:nowrap;">Delete Selected</button>
+        <button type="button" class="btn btn-danger" style="background:#b91c1c; font-weight:600; height:38px; padding:0 14px; white-space:nowrap;" onclick="deleteAllProducts()">Delete All</button>
+        <a href="/products/add" class="btn btn-primary" style="height:38px; padding:0 16px; display:inline-flex; align-items:center; white-space:nowrap;">+ Add Product</a>
       </div>
     </div>
 
@@ -45,7 +45,7 @@
               <th>Reorder</th>
               <th>Unit</th>
               <th>GST</th>
-              <th class="no-print">Actions</th>
+              <th class="no-print" style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -82,9 +82,9 @@
                 <td><%= prod.gst_rate %>%</td>
                 <td class="no-print" style="white-space: nowrap; text-align: right;">
                   <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
-                    <a href="/products/edit/<%= prod.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">Edit ✏️</a>
+                    <a href="/products/edit/<%= prod.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">Edit</a>
                     <form action="/products/delete/<%= prod.id %>" method="POST" class="confirm-delete d-inline" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete <%= prod.name.replace(/'/g, `\\'`) %>?')">
-                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">Delete 🗑️</button>
+                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">Delete</button>
                     </form>
                   </div>
                 </td>

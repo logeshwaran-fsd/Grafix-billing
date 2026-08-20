@@ -1,7 +1,7 @@
 <%- include('../partials/head') %>
-<%- include('../partials/sidebar', { activePage: 'billing-new' }) %>
+<%- include('../partials/sidebar', { activePage: (typeof editInvoiceId !== 'undefined' && editInvoiceId) ? 'billing' : 'billing-new' }) %>
 <div class="main-content">
-  <%- include('../partials/header', { pageTitle: 'New Invoice' }) %>
+  <%- include('../partials/header', { pageTitle: (typeof editInvoiceNumber !== 'undefined' && editInvoiceNumber) ? 'Edit Invoice: ' + editInvoiceNumber : 'New Invoice' }) %>
   <%- include('../partials/alerts') %>
   <div class="content-area">
     <div class="grid grid-3">
@@ -42,7 +42,24 @@
       <!-- Right column: Customer, Payment & Summary -->
       <div style="grid-column: span 1;">
         <div class="card">
-          <div class="card-header"><h3 class="card-title">Billing Details</h3></div>
+          <div class="card-header d-flex justify-between align-center">
+            <h3 class="card-title"><%= (typeof editInvoiceNumber !== 'undefined' && editInvoiceNumber) ? 'Edit Invoice' : 'Billing Details' %></h3>
+            <% if (typeof editInvoiceNumber !== 'undefined' && editInvoiceNumber) { %>
+              <span class="badge" style="background:var(--accent); color:#fff; font-size:13px; font-weight:700; padding:4px 10px; border-radius:6px;">
+                Bill #: <%= editInvoiceNumber %>
+              </span>
+            <% } %>
+          </div>
+          
+          <% if (typeof editInvoiceNumber !== 'undefined' && editInvoiceNumber) { %>
+          <div style="background: rgba(2, 132, 199, 0.1); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 11px; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; display: block;">Editing Bill Number</span>
+              <strong style="font-size: 16px; color: var(--accent);"><%= editInvoiceNumber %></strong>
+            </div>
+            <span class="badge badge-warning" style="font-size: 11px; font-weight: 600;">Editing Bill</span>
+          </div>
+          <% } %>
           
           <div class="form-group">
             <label for="branch-select" class="fw-bold" style="color:var(--accent);">Branch</label>
@@ -153,7 +170,7 @@
           </div>
           </div>
 
-          <button type="button" id="submit-invoice-btn" class="btn btn-primary btn-block mt-4" onclick="submitInvoice()">Create Invoice & Print</button>
+          <button type="button" id="submit-invoice-btn" class="btn btn-primary btn-block mt-4" onclick="submitInvoice()"><%= (typeof editInvoiceNumber !== 'undefined' && editInvoiceNumber) ? 'Update Bill (' + editInvoiceNumber + ') & Print' : 'Create Invoice & Print' %></button>
           <button type="button" class="btn btn-secondary btn-block mt-2" onclick="clearInvoice()">Clear</button>
         </div>
       </div>

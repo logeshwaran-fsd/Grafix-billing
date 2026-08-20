@@ -4,19 +4,19 @@
   <%- include('../partials/header', { pageTitle: 'Customers' }) %>
   <%- include('../partials/alerts') %>
   <div class="content-area">
-    <div class="mb-3 d-flex justify-between align-center" style="flex-wrap: wrap; gap: 12px;">
-      <form action="/customers" method="GET" class="form-inline flex-grow-1" style="max-width:450px; display:flex; gap:8px; align-items:center;">
-        <input type="text" name="search" class="form-control" placeholder="Search name, phone, city..." value="<%= search %>" style="flex:1;">
-        <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Search</button>
+    <div class="mb-3 d-flex justify-between align-center" style="gap: 12px;">
+      <form action="/customers" method="GET" class="form-inline" style="display:flex; gap:8px; align-items:center; margin:0;">
+        <input type="text" name="search" class="form-control" placeholder="Search name, phone, city..." value="<%= search %>" style="width:240px; height:38px;">
+        <button type="submit" class="btn btn-primary" style="height:38px; padding:0 16px; white-space:nowrap;">Search</button>
         <% if (search) { %>
-          <a href="/customers" class="btn btn-secondary" style="padding: 8px 16px;">Clear</a>
+          <a href="/customers" class="btn btn-secondary" style="height:38px; padding:0 16px; display:inline-flex; align-items:center; white-space:nowrap;">Clear</a>
         <% } %>
       </form>
-      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-secondary" onclick="openCustImportModal()" style="padding:8px 14px;">Import Excel 👥</button>
-        <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDeleteCustomers()" style="padding:8px 14px;">Delete Selected</button>
-        <button type="button" class="btn btn-danger" style="background:#b91c1c; font-weight:600; padding:8px 14px;" onclick="deleteAllCustomers()">Delete All 🗑️</button>
-        <a href="/customers/add" class="btn btn-primary" style="padding:8px 16px;">+ Add Customer</a>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="openCustImportModal()" style="height:38px; padding:0 14px; white-space:nowrap;">Import Excel</button>
+        <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDeleteCustomers()" style="height:38px; padding:0 14px; white-space:nowrap;">Delete Selected</button>
+        <button type="button" class="btn btn-danger" style="background:#b91c1c; font-weight:600; height:38px; padding:0 14px; white-space:nowrap;" onclick="deleteAllCustomers()">Delete All</button>
+        <a href="/customers/add" class="btn btn-primary" style="height:38px; padding:0 16px; display:inline-flex; align-items:center; white-space:nowrap;">+ Add Customer</a>
       </div>
     </div>
 
@@ -24,7 +24,7 @@
     <div id="cust-import-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:var(--bg-card, #1e293b); color:#fff; border-radius:12px; padding:24px; max-width:480px; width:90%; border:1px solid var(--border, #334155); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h3 style="margin:0; font-size:18px;">👥 Import Customers from Excel</h3>
+          <h3 style="margin:0; font-size:18px;">Import Customers from Excel</h3>
           <button type="button" style="background:none; border:none; color:#aaa; font-size:20px; cursor:pointer;" onclick="closeCustImportModal()">✕</button>
         </div>
         <p style="font-size:13px; color:#94a3b8; margin-bottom:16px;">Upload an Excel file (.xlsx) with columns: <strong>Name, Phone, Email, Address, City, State, Pincode, GSTIN, Balance</strong></p>
@@ -34,7 +34,7 @@
           </div>
           <div style="display:flex; justify-content:flex-end; gap:8px;">
             <button type="button" class="btn btn-secondary" onclick="closeCustImportModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary">Start Import 🚀</button>
+            <button type="submit" class="btn btn-primary">Start Import</button>
           </div>
         </form>
       </div>
@@ -52,7 +52,7 @@
               <th>City</th>
               <th>State</th>
               <th>GSTIN</th>
-              <th class="no-print">Actions</th>
+              <th class="no-print" style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -70,9 +70,9 @@
                 <td><span class="badge badge-default"><%= cust.gstin || '-' %></span></td>
                 <td class="no-print" style="white-space: nowrap; text-align: right;">
                   <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
-                    <a href="/customers/edit/<%= cust.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">Edit ✏️</a>
+                    <a href="/customers/edit/<%= cust.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">Edit</a>
                     <form action="/customers/delete/<%= cust.id %>" method="POST" class="confirm-delete d-inline" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete customer <%= cust.name.replace(/'/g, `\\'`) %>?')">
-                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">Delete 🗑️</button>
+                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">Delete</button>
                     </form>
                   </div>
                 </td>

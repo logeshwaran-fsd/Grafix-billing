@@ -297,10 +297,18 @@ router.get('/:id/edit', async (req, res) => {
       invoice_type: invoice.invoice_type || 'gst',
       amount_paid: invoice.amount_paid,
       date: invoice.created_at ? new Date(invoice.created_at).toISOString().split('T')[0] : '',
+      invoice_number: invoice.invoice_number,
       items: processedItems
     };
     
-    res.render('billing/new', { pageTitle: 'Edit Invoice ' + invoice.invoice_number, activePage: 'billing', cloneData, editInvoiceId: invoice.id, branches });
+    res.render('billing/new', { 
+      pageTitle: 'Edit Invoice ' + invoice.invoice_number, 
+      activePage: 'billing', 
+      cloneData, 
+      editInvoiceId: invoice.id, 
+      editInvoiceNumber: invoice.invoice_number, 
+      branches 
+    });
   } catch (err) {
     console.error(err);
     res.redirect('/billing');

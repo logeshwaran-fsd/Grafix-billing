@@ -93,21 +93,21 @@
                   <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
                     <button type="button" class="btn btn-secondary btn-sm" 
                             onclick='openEditProductModal(<%- JSON.stringify(prod) %>)'
-                            style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                      Edit ✏️
+                            style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">
+                      Edit
                     </button>
                     <button type="button" class="btn btn-success btn-sm" 
                             onclick="openRestockModal('<%= prod.id %>', '<%= prod.name.replace(/'/g, `\\'`).replace(/"/g, `\\\"`) %>', '<%= prod.code %>', <%= prod.stock_quantity %>, this)"
-                            style="background: var(--success); border: none; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: #fff; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                      Quick Add ➕
+                            style="background: var(--success); border: none; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: #fff; border-radius: 6px; display: inline-flex; align-items: center;">
+                      Quick Add
                     </button>
-                    <a href="/inventory/adjust/<%= prod.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                      History 📜
+                    <a href="/inventory/adjust/<%= prod.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">
+                      History
                     </a>
                     <form action="/products/delete/<%= prod.id %>" method="POST" class="confirm-delete d-inline" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete <%= prod.name.replace(/'/g, `\\'`) %>?')">
                       <input type="hidden" name="redirect_to" value="/inventory">
-                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                        Delete 🗑️
+                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">
+                        Delete
                       </button>
                     </form>
                   </div>
@@ -253,7 +253,7 @@
 <div class="modal-overlay" id="restockModal">
   <div class="modal-card">
     <div class="modal-header">
-      <h3 id="modalProductTitle">⚡ Quick Stock Adjustment</h3>
+      <h3 id="modalProductTitle">Quick Stock Adjustment</h3>
       <button class="modal-close" onclick="closeRestockModal()">&times;</button>
     </div>
     <form id="quickRestockForm">
@@ -303,7 +303,7 @@
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #e2e8f0; padding-top:15px;">
         <button type="button" class="btn btn-secondary" onclick="closeRestockModal()" style="padding:8px 18px; color:#000;">Cancel</button>
-        <button type="submit" class="btn btn-success" id="modalSubmitBtn" style="padding:8px 20px; background:#10b981; border:none; color:#fff; font-weight:700; border-radius:6px; cursor:pointer;">Update Stock 💾</button>
+        <button type="submit" class="btn btn-success" id="modalSubmitBtn" style="padding:8px 20px; background:#10b981; border:none; color:#fff; font-weight:700; border-radius:6px; cursor:pointer;">Update Stock</button>
       </div>
     </form>
   </div>
@@ -313,7 +313,7 @@
 <div class="modal-overlay" id="editProductModal">
   <div class="modal-card modal-card-lg">
     <div class="modal-header">
-      <h3 id="editModalHeaderTitle">✏️ Edit Product Details</h3>
+      <h3 id="editModalHeaderTitle">Edit Product Details</h3>
       <button class="modal-close" onclick="closeEditProductModal()">&times;</button>
     </div>
     <form id="editProductForm" method="POST">
@@ -408,7 +408,7 @@
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #e2e8f0; padding-top:15px;">
         <button type="button" class="btn btn-secondary" onclick="closeEditProductModal()" style="padding:8px 18px; color:#000;">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="padding:8px 22px; font-weight:700; border-radius:6px; cursor:pointer;">Save Product Changes 💾</button>
+        <button type="submit" class="btn btn-primary" style="padding:8px 22px; font-weight:700; border-radius:6px; cursor:pointer;">Save Changes</button>
       </div>
     </form>
   </div>
