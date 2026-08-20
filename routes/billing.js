@@ -641,6 +641,10 @@ router.post('/:id/delete', async (req, res) => {
               WHERE id = $2::integer
             `, [item.quantity, item.product_id]);
           }
+          await client.query(`
+            INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes, user_id)
+            VALUES ($1, 'return', $2, $3, $4, $5)
+          `, [item.product_id, item.quantity, req.params.id, `Deleted Invoice #${req.params.id} (Restored Stock)`, req.session.user ? req.session.user.id : null]);
         }
         
         if (inv.customer_id && inv.payment_status === 'pending') {

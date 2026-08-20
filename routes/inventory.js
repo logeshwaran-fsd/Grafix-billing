@@ -64,7 +64,7 @@ router.get('/adjust/:id', async (req, res) => {
 });
 
 router.post('/adjust/:id', async (req, res) => {
-  const { type, quantity, notes } = req.body;
+  const { type, quantity, notes, branch } = req.body;
   const qty = parseInt(quantity);
   if (!qty || qty <= 0) {
     req.session.error = 'Invalid quantity!';
@@ -78,11 +78,27 @@ router.post('/adjust/:id', async (req, res) => {
     await client.query('BEGIN');
     
     const change = type === 'purchase' || type === 'return' ? qty : -qty;
-    await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [change, req.params.id]);
+    if (branch) {
+      await client.query(`
+        UPDATE products 
+        SET stock_quantity = COALESCE(stock_quantity, 0) + $1::numeric,
+            branch_stocks = jsonb_set(
+              COALESCE(branch_stocks, '{}'::jsonb), 
+              ARRAY[$2::text], 
+              to_jsonb(COALESCE((COALESCE(branch_stocks, '{}'::jsonb)->>$2::text)::numeric, 0) + $1::numeric),
+              true
+            )
+        WHERE id = $3::integer
+      `, [change, branch, req.params.id]);
+    } else {
+      await client.query('UPDATE products SET stock_quantity = COALESCE(stock_quantity, 0) + $1::numeric WHERE id = $2::integer', [change, req.params.id]);
+    }
+
+    const noteText = notes ? `${notes} ${branch ? '(' + branch + ')' : ''}` : `Stock adjustment ${branch ? '(' + branch + ')' : ''}`;
     await client.query(`
       INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
       VALUES ($1, $2, $3, $4, $5)
-    `, [req.params.id, type, change, notes, req.session.user.id]);
+    `, [req.params.id, type, change, noteText, req.session.user ? req.session.user.id : null]);
     
     await client.query('COMMIT');
     req.session.success = 'Stock adjusted successfully!';
