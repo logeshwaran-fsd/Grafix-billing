@@ -217,8 +217,17 @@ router.post('/create', async (req, res) => {
         
         await client.query(`
           UPDATE products 
-          SET stock_quantity = stock_quantity - $1,
-              branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) - $1)::text::jsonb)
+          SET stock_quantity = COALESCE(stock_quantity, 0) - $1,
+              branch_stocks = CASE 
+                WHEN $2 IS NOT NULL AND $2 != '' THEN
+                  jsonb_set(
+                    COALESCE(branch_stocks, '{}'::jsonb), 
+                    ARRAY[$2], 
+                    to_jsonb(COALESCE((COALESCE(branch_stocks, '{}'::jsonb)->>$2)::numeric, 0) - $1),
+                    true
+                  )
+                ELSE COALESCE(branch_stocks, '{}'::jsonb)
+              END
           WHERE id = $3
         `, [item.quantity, branch, item.product_id]);
         
@@ -348,8 +357,17 @@ router.post('/:id/edit', async (req, res) => {
       for (const item of oldItems) {
         await client.query(`
           UPDATE products 
-          SET stock_quantity = stock_quantity + $1,
-              branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) + $1)::text::jsonb)
+          SET stock_quantity = COALESCE(stock_quantity, 0) + $1,
+              branch_stocks = CASE 
+                WHEN $2 IS NOT NULL AND $2 != '' THEN
+                  jsonb_set(
+                    COALESCE(branch_stocks, '{}'::jsonb), 
+                    ARRAY[$2], 
+                    to_jsonb(COALESCE((COALESCE(branch_stocks, '{}'::jsonb)->>$2)::numeric, 0) + $1),
+                    true
+                  )
+                ELSE COALESCE(branch_stocks, '{}'::jsonb)
+              END
           WHERE id = $3
         `, [item.quantity, oldInvoice.branch, item.product_id]);
       }
@@ -430,8 +448,17 @@ router.post('/:id/edit', async (req, res) => {
         
         await client.query(`
           UPDATE products 
-          SET stock_quantity = stock_quantity - $1,
-              branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) - $1)::text::jsonb)
+          SET stock_quantity = COALESCE(stock_quantity, 0) - $1,
+              branch_stocks = CASE 
+                WHEN $2 IS NOT NULL AND $2 != '' THEN
+                  jsonb_set(
+                    COALESCE(branch_stocks, '{}'::jsonb), 
+                    ARRAY[$2], 
+                    to_jsonb(COALESCE((COALESCE(branch_stocks, '{}'::jsonb)->>$2)::numeric, 0) - $1),
+                    true
+                  )
+                ELSE COALESCE(branch_stocks, '{}'::jsonb)
+              END
           WHERE id = $3
         `, [item.quantity, branch, item.product_id]);
         
@@ -526,13 +553,22 @@ router.post('/:id/cancel', async (req, res) => {
       for (const item of items) {
         await client.query(`
           UPDATE products 
-          SET stock_quantity = stock_quantity + $1,
-              branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) + $1)::text::jsonb)
+          SET stock_quantity = COALESCE(stock_quantity, 0) + $1,
+              branch_stocks = CASE 
+                WHEN $2 IS NOT NULL AND $2 != '' THEN
+                  jsonb_set(
+                    COALESCE(branch_stocks, '{}'::jsonb), 
+                    ARRAY[$2], 
+                    to_jsonb(COALESCE((COALESCE(branch_stocks, '{}'::jsonb)->>$2)::numeric, 0) + $1),
+                    true
+                  )
+                ELSE COALESCE(branch_stocks, '{}'::jsonb)
+              END
           WHERE id = $3
         `, [item.quantity, inv.branch, item.product_id]);
         await client.query(`
           INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes, user_id)
-          VALUES ($1, 'return', $2, $3, 'Cancelled Invoice', $4)
+          VALUES ($1, 'return', $2, $3, 'Cancelled Invoice (Restored)', $4)
         `, [item.product_id, item.quantity, req.params.id, req.session.user.id]);
       }
       
@@ -572,12 +608,19 @@ router.post('/:id/delete', async (req, res) => {
         for (const item of items) {
           await client.query(`
             UPDATE products 
-            SET stock_quantity = stock_quantity + $1,
-                branch_stocks = jsonb_set(branch_stocks, ARRAY[$2], (COALESCE((branch_stocks->>$2)::numeric, 0) + $1)::text::jsonb)
+            SET stock_quantity = COALESCE(stock_quantity, 0) + $1,
+                branch_stocks = CASE 
+                  WHEN $2 IS NOT NULL AND $2 != '' THEN
+                    jsonb_set(
+                      COALESCE(branch_stocks, '{}'::jsonb), 
+                      ARRAY[$2], 
+                      to_jsonb(COALESCE((COALESCE(branch_stocks, '{}'::jsonb)->>$2)::numeric, 0) + $1),
+                      true
+                    )
+                  ELSE COALESCE(branch_stocks, '{}'::jsonb)
+                END
             WHERE id = $3
           `, [item.quantity, inv.branch, item.product_id]);
-          // No need to insert a stock transaction if we are deleting the invoice entirely, but we could if we want a trace.
-          // Since it's a hard delete, we will delete the existing 'sale' stock_transactions related to this invoice.
         }
         
         if (inv.customer_id && inv.payment_status === 'pending') {
