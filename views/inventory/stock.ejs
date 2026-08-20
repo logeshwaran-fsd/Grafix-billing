@@ -91,25 +91,24 @@
                 </td>
                 <td class="no-print" style="white-space: nowrap; text-align: right;">
                   <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
-                    <button type="button" class="btn btn-secondary btn-sm" 
-                            onclick="openEditProductModal('<%= prod.id %>')"
-                            style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">
+                    <button type="button" class="btn btn-secondary btn-sm edit-product-btn" 
+                            data-product="<%= encodeURIComponent(JSON.stringify(prod)) %>"
+                            onclick="handleEditProductClick(this)"
+                            style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; cursor: pointer;">
                       Edit
                     </button>
-                    <button type="button" class="btn btn-success btn-sm" 
-                            onclick="openRestockModal('<%= prod.id %>', '<%= prod.name.replace(/'/g, `\\'`).replace(/"/g, `\\\"`) %>', '<%= prod.code %>', <%= prod.stock_quantity %>, this)"
+                    <button type="button" class="btn btn-success btn-sm restock-product-btn" 
+                            data-id="<%= prod.id %>"
+                            data-name="<%= prod.name %>"
+                            data-code="<%= prod.code %>"
+                            data-stock="<%= prod.stock_quantity %>"
+                            onclick="handleRestockClick(this)"
                             style="background: var(--success); border: none; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: #fff; border-radius: 6px; display: inline-flex; align-items: center;">
                       Quick Add
                     </button>
                     <a href="/inventory/adjust/<%= prod.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">
                       History
                     </a>
-                    <form action="/products/delete/<%= prod.id %>" method="POST" class="confirm-delete d-inline" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete <%= prod.name.replace(/'/g, `\\'`) %>?')">
-                      <input type="hidden" name="redirect_to" value="/inventory">
-                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">
-                        Delete
-                      </button>
-                    </form>
                   </div>
                 </td>
               </tr>
@@ -371,7 +370,7 @@
               <% branches.forEach(b => { %>
                 <div style="flex:1; min-width:120px;">
                   <label style="font-size:12px; color:#475569 !important;"><%= b %> Stock</label>
-                  <input type="number" name="branch_<%= b %>" id="edit_branch_<%= b %>" class="form-control edit-branch-input" value="0" style="height:38px;">
+                  <input type="number" name="branch_<%= b %>" id="edit_branch_<%= b %>" data-branch-name="<%= b %>" class="form-control edit-branch-input" value="0" style="height:38px;">
                 </div>
               <% }) %>
             <% } %>
@@ -533,11 +532,6 @@ quickRestockForm.addEventListener('submit', async (e) => {
   }
 });
 
-// Products map for safe modal population
-const PRODUCTS_LIST = <%- JSON.stringify(products) %>;
-const PRODUCTS_MAP = {};
-PRODUCTS_LIST.forEach(p => { PRODUCTS_MAP[p.id] = p; });
-
 // Edit Product Modal elements
 const editProductModal = document.getElementById('editProductModal');
 const editProductForm = document.getElementById('editProductForm');
@@ -555,12 +549,29 @@ document.querySelectorAll('.edit-branch-input').forEach(inp => {
   inp.addEventListener('input', updateEditTotalStock);
 });
 
-function openEditProductModal(prodId) {
-  const prod = PRODUCTS_MAP[prodId];
+function handleEditProductClick(btn) {
+  try {
+    const raw = btn.getAttribute('data-product');
+    const prod = JSON.parse(decodeURIComponent(raw));
+    openEditProductModal(prod);
+  } catch (err) {
+    console.error('Failed to parse product data:', err);
+  }
+}
+
+function handleRestockClick(btn) {
+  const id = btn.getAttribute('data-id');
+  const name = btn.getAttribute('data-name');
+  const code = btn.getAttribute('data-code');
+  const currentStock = parseInt(btn.getAttribute('data-stock')) || 0;
+  openRestockModal(id, name, code, currentStock, btn);
+}
+
+function openEditProductModal(prod) {
   if (!prod) return;
 
   editProductForm.action = '/products/edit/' + prod.id;
-  editModalHeaderTitle.textContent = 'Edit: ' + prod.name + ' (' + prod.code + ')';
+  editModalHeaderTitle.textContent = 'Edit: ' + (prod.name || '') + ' (' + (prod.code || '') + ')';
   
   document.getElementById('edit_code').value = prod.code || '';
   document.getElementById('edit_name').value = prod.name || '';
@@ -573,15 +584,15 @@ function openEditProductModal(prodId) {
   document.getElementById('edit_gst_rate').value = (prod.gst_rate !== undefined) ? prod.gst_rate : 18;
   document.getElementById('edit_description').value = prod.description || '';
   
-  // Fill branch stocks
-  <% if (typeof branches !== 'undefined') { %>
-    <% branches.forEach(b => { %>
-      const branchInput_<%= b %> = document.getElementById('edit_branch_<%= b %>');
-      if (branchInput_<%= b %>) {
-        branchInput_<%= b %>.value = (prod.branch_stocks && prod.branch_stocks['<%= b %>'] !== undefined) ? prod.branch_stocks['<%= b %>'] : 0;
-      }
-    <% }) %>
-  <% } %>
+  // Fill branch stocks dynamically from data-branch-name
+  document.querySelectorAll('.edit-branch-input').forEach(inp => {
+    const branchName = inp.getAttribute('data-branch-name');
+    if (branchName && prod.branch_stocks && prod.branch_stocks[branchName] !== undefined) {
+      inp.value = prod.branch_stocks[branchName];
+    } else {
+      inp.value = 0;
+    }
+  });
   
   updateEditTotalStock();
   
