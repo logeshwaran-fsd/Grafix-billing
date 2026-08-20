@@ -78,9 +78,91 @@ router.get('/export/customers', async (req, res) => {
   }
 });
 
-router.get('/export/database', (req, res) => {
-  req.session.error = 'Database file download not supported for PostgreSQL.';
-  res.redirect('/data');
+router.get('/export/database', async (req, res) => {
+  try {
+    const db = getDb();
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+
+    // Read base schema DDL
+    let schemaSql = '';
+    const schemaPath = path.join(__dirname, '../database/schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      schemaSql = fs.readFileSync(schemaPath, 'utf8');
+    }
+
+    let sqlDump = `-- =========================================================\n`;
+    sqlDump += `-- Grafix Billing & Inventory Database Backup (PostgreSQL)\n`;
+    sqlDump += `-- Export Date: ${now.toISOString()}\n`;
+    sqlDump += `-- =========================================================\n\n`;
+
+    sqlDump += `-- 1. Schema Definitions\n`;
+    sqlDump += schemaSql + `\n\n`;
+
+    sqlDump += `-- 2. Table Data Inserts\n\n`;
+
+    const tables = [
+      'settings',
+      'users',
+      'branches',
+      'categories',
+      'products',
+      'customers',
+      'invoices',
+      'invoice_items',
+      'stock_transactions'
+    ];
+
+    function formatSqlValue(val) {
+      if (val === null || val === undefined) return 'NULL';
+      if (typeof val === 'number') return Number.isFinite(val) ? val.toString() : 'NULL';
+      if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+      if (val instanceof Date) return `'${val.toISOString()}'`;
+      if (typeof val === 'object') {
+        return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
+      }
+      return `'${String(val).replace(/'/g, "''")}'`;
+    }
+
+    for (const table of tables) {
+      try {
+        const rowsRes = await db.query(`SELECT * FROM ${table} ORDER BY id ASC`);
+        const rows = rowsRes.rows;
+
+        if (rows.length > 0) {
+          sqlDump += `-- Data for ${table} (${rows.length} rows)\n`;
+          const cols = Object.keys(rows[0]);
+          const colsList = cols.map(c => `"${c}"`).join(', ');
+
+          for (const row of rows) {
+            const valsList = cols.map(c => formatSqlValue(row[c])).join(', ');
+            sqlDump += `INSERT INTO ${table} (${colsList}) VALUES (${valsList}) ON CONFLICT DO NOTHING;\n`;
+          }
+
+          // Reset sequence to max id if serial id column exists
+          if (cols.includes('id')) {
+            sqlDump += `SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM ${table}), 1), true);\n`;
+          }
+          sqlDump += `\n`;
+        }
+      } catch (tableErr) {
+        console.warn(`Could not export table ${table}:`, tableErr.message);
+      }
+    }
+
+    sqlDump += `-- =========================================================\n`;
+    sqlDump += `-- End of Database Backup\n`;
+    sqlDump += `-- =========================================================\n`;
+
+    const filename = `grafix_billing_backup_${dateStr}.sql`;
+    res.setHeader('Content-Type', 'application/sql');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(sqlDump);
+  } catch (err) {
+    console.error('SQL export error:', err);
+    req.session.error = 'Failed to export SQL database: ' + err.message;
+    res.redirect('/data');
+  }
 });
 
 router.post('/import/products', upload.single('file'), async (req, res) => {

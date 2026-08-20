@@ -11,9 +11,9 @@
         <p class="text-secondary mb-4 fs-sm">Download your database or tables as files to migrate servers or back up your records.</p>
         
         <div class="d-flex flex-column gap-3">
-          <a href="/data/export/products" class="btn btn-primary btn-block">📥 Export Products (.xlsx)</a>
-          <a href="/data/export/customers" class="btn btn-primary btn-block">📥 Export Customers (.xlsx)</a>
-          <a href="/data/export/database" class="btn btn-warning btn-block">💾 Download SQLite Database File (.db)</a>
+          <a href="/data/export/products" class="btn btn-secondary btn-block">Export Products (.xlsx)</a>
+          <a href="/data/export/customers" class="btn btn-secondary btn-block">Export Customers (.xlsx)</a>
+          <a href="/data/export/database" class="btn btn-primary btn-block" style="font-weight:700;">Export Database Backup (.sql)</a>
         </div>
       </div>
 
@@ -28,7 +28,7 @@
               <label for="import-file" class="fw-bold mb-1 d-block">Select Products Excel File (.xlsx)</label>
               <input type="file" id="import-file" name="file" class="form-control" accept=".xlsx" required>
             </div>
-            <button type="submit" class="btn btn-success btn-block mt-2">🚀 Import Products</button>
+            <button type="submit" class="btn btn-success btn-block mt-2">Import Products</button>
           </form>
         </div>
 
@@ -38,7 +38,7 @@
               <label for="import-cust-file" class="fw-bold mb-1 d-block">Select Customers Excel File (.xlsx)</label>
               <input type="file" id="import-cust-file" name="file" class="form-control" accept=".xlsx" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block mt-2">👥 Import Customers</button>
+            <button type="submit" class="btn btn-primary btn-block mt-2">Import Customers</button>
           </form>
         </div>
       </div>
