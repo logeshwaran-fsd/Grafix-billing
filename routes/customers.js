@@ -36,11 +36,12 @@ router.get('/api/search', async (req, res) => {
   const q = req.query.q || '';
   try {
     const dbRes = await getDb().query(`
-      SELECT id, name, phone, city, balance 
+      SELECT id, name, phone, email, address, city, state, pincode, gstin, balance 
       FROM customers 
-      WHERE name ILIKE $1 OR phone ILIKE $2 
-      LIMIT 10
-    `, [`${q}%`, `${q}%`]);
+      WHERE name ILIKE $1 OR phone ILIKE $2 OR city ILIKE $3
+      ORDER BY name ASC
+      LIMIT 15
+    `, [`%${q}%`, `%${q}%`, `%${q}%`]);
     res.json(dbRes.rows);
   } catch (err) {
     res.status(500).json([]);
@@ -66,17 +67,29 @@ router.post('/add', async (req, res) => {
 });
 
 router.post('/api/quick-add', async (req, res) => {
-  const { name, phone, city } = req.body;
-  if (!name) return res.status(400).json({ success: false, error: 'Name is required' });
+  const { name, phone, email, address, gstin, city, state, pincode, opening_balance } = req.body;
+  if (!name) return res.status(400).json({ success: false, error: 'Customer Name is required' });
   try {
+    const initialBalance = parseFloat(opening_balance) || 0;
     const dbRes = await getDb().query(`
-      INSERT INTO customers (name, phone, city, state) 
-      VALUES ($1, $2, $3, 'Tamil Nadu') RETURNING *
-    `, [name, phone || '', city || 'Chennai']);
+      INSERT INTO customers (name, phone, email, address, gstin, city, state, pincode, balance) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
+    `, [
+      name.trim(),
+      phone ? phone.trim() : '',
+      email ? email.trim() : '',
+      address ? address.trim() : '',
+      gstin ? gstin.trim().toUpperCase() : '',
+      city ? city.trim() : 'Chennai',
+      state ? state.trim() : 'Tamil Nadu',
+      pincode ? pincode.trim() : '',
+      initialBalance
+    ]);
     const customer = dbRes.rows[0];
-    res.json({ success: true, customer: { id: customer.id, name: customer.name, phone: customer.phone, city: customer.city } });
+    res.json({ success: true, customer });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to add customer' });
+    console.error('Quick add customer error:', err);
+    res.status(500).json({ success: false, error: 'Failed to add customer: ' + err.message });
   }
 });
 

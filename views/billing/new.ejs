@@ -89,13 +89,28 @@
           <% } %>
 
           <div class="form-group autocomplete-wrapper" style="position:relative;">
-            <label for="customer-search">Customer Name</label>
+            <label for="customer-search" class="fw-bold">Customer Name / Search</label>
             <div class="d-flex" style="gap: 8px;">
-              <input type="text" id="customer-search" class="form-control" style="flex: 1;" placeholder="Search customer (default Walk-in)" autocomplete="off">
+              <input type="text" id="customer-search" class="form-control" style="flex: 1;" placeholder="Type name or phone (default Walk-in)" autocomplete="off">
               <button type="button" class="btn btn-primary" onclick="openQuickCustModal()" title="Add New Customer" style="padding: 0 16px; font-weight: bold;">+</button>
             </div>
             <input type="hidden" id="customer-id" value="">
-            <div id="customer-dropdown" class="autocomplete-dropdown" style="display:none; position:absolute; width:100%; z-index:1000; background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-lg); max-height:200px; overflow-y:auto; border-radius:8px; margin-top:4px;"></div>
+            <div id="customer-dropdown" class="autocomplete-dropdown" style="display:none; position:absolute; width:100%; z-index:1000; background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-lg); max-height:260px; overflow-y:auto; border-radius:8px; margin-top:4px;"></div>
+            
+            <!-- Selected Customer Identification Card -->
+            <div id="selected-customer-card" style="display:none; background:rgba(2, 132, 199, 0.08); border:1px solid var(--accent); border-radius:8px; padding:12px 14px; margin-top:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="flex:1;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <strong id="card-cust-name" style="font-size:15px; color:var(--text-primary);">Customer Name</strong>
+                    <span id="card-cust-gstin-badge" class="badge badge-default" style="font-size:11px; display:none;"></span>
+                  </div>
+                  <div id="card-cust-phone" style="font-size:13px; color:var(--text-secondary); margin-top:3px; font-weight:600;">Phone: -</div>
+                  <div id="card-cust-address" style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Address: -</div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="clearSelectedCustomer()" style="padding:2px 8px; font-size:11px; border-radius:4px;" title="Clear Customer">✕ Clear</button>
+              </div>
+            </div>
           </div>
 
           <div id="wallet-section" style="display:none; background: var(--success-bg); padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--success);">
@@ -205,25 +220,67 @@
 </div>
 
 <!-- Quick Add Customer Modal -->
-<div id="quick-customer-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center;">
-  <div class="modal-content" style="background:var(--bg-card); padding:24px; border-radius:8px; width:100%; max-width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border:1px solid var(--border);">
-    <h3 style="margin-top:0; color:var(--text-primary);">Add New Customer</h3>
-    <div class="form-group">
-      <label>Name</label>
-      <input type="text" id="quick-cust-name" class="form-control" placeholder="John Doe" onkeydown="if(event.key==='Enter') document.getElementById('quick-cust-phone').focus()">
+<div id="quick-customer-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1050; align-items:center; justify-content:center; overflow-y:auto; padding:20px 10px;">
+  <div class="modal-content" style="background:var(--bg-card); padding:24px; border-radius:12px; width:100%; max-width:560px; box-shadow: 0 20px 30px rgba(0,0,0,0.5); border:1px solid var(--border);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="margin:0; font-size:18px; color:var(--text-primary);">Add New Customer Details</h3>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeQuickCustModal()" style="padding:2px 8px;">✕</button>
     </div>
-    <div class="form-group">
-      <label>Phone</label>
-      <input type="text" id="quick-cust-phone" class="form-control" placeholder="9876543210" onkeydown="if(event.key==='Enter') document.getElementById('quick-cust-city').focus()">
-    </div>
-    <div class="form-group">
-      <label>City</label>
-      <input type="text" id="quick-cust-city" class="form-control" placeholder="Chennai" onkeydown="if(event.key==='Enter') submitQuickCust()">
-    </div>
-    <div class="d-flex justify-between mt-4">
-      <button type="button" class="btn btn-secondary" onclick="closeQuickCustModal()">Cancel</button>
-      <button type="button" class="btn btn-success" onclick="submitQuickCust()">Save Customer</button>
-    </div>
+
+    <form id="quick-cust-form" onsubmit="event.preventDefault(); submitQuickCust();">
+      <div class="grid grid-2" style="gap:12px; margin-bottom:12px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="fw-bold" style="font-size:12px;">Customer Name *</label>
+          <input type="text" id="quick-cust-name" class="form-control" required placeholder="e.g. John Doe / Grafix Tech">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="fw-bold" style="font-size:12px;">Phone Number *</label>
+          <input type="text" id="quick-cust-phone" class="form-control" required placeholder="e.g. 9876543210">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:12px;">Address (Street / Building / Area)</label>
+        <textarea id="quick-cust-address" class="form-control" rows="2" placeholder="e.g. No. 12, Anna Salai, Mount Road"></textarea>
+      </div>
+
+      <div class="grid grid-3" style="gap:12px; margin-bottom:12px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:12px;">City</label>
+          <input type="text" id="quick-cust-city" class="form-control" value="Chennai" placeholder="Chennai">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:12px;">State</label>
+          <input type="text" id="quick-cust-state" class="form-control" value="Tamil Nadu" placeholder="Tamil Nadu">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:12px;">Pincode</label>
+          <input type="text" id="quick-cust-pincode" class="form-control" placeholder="600001">
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="gap:12px; margin-bottom:12px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:12px;">GSTIN (Optional)</label>
+          <input type="text" id="quick-cust-gstin" class="form-control" placeholder="33AAAAA0000A1Z5" style="text-transform:uppercase;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:12px;">Email (Optional)</label>
+          <input type="email" id="quick-cust-email" class="form-control" placeholder="customer@example.com">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px;">
+        <label style="font-size:12px;">Advance / Opening Balance (₹)</label>
+        <input type="number" id="quick-cust-balance" class="form-control" value="0" step="0.01" placeholder="0.00">
+        <small class="text-muted" style="font-size:11px;">Enter negative (e.g. -500) for advance wallet, or positive for credit dues.</small>
+      </div>
+
+      <div class="d-flex justify-between" style="border-top:1px solid var(--border); padding-top:14px;">
+        <button type="button" class="btn btn-secondary" onclick="closeQuickCustModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="padding:8px 20px; font-weight:700;">Save & Select Customer</button>
+      </div>
+    </form>
   </div>
 </div>
 

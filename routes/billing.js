@@ -87,14 +87,15 @@ router.get('/new', async (req, res) => {
       if (invoice) {
         const itemsRes = await db.query('SELECT product_id, product_name, product_code, quantity, unit_price, discount, tax_rate FROM invoice_items WHERE invoice_id = $1', [cloneId]);
         const items = itemsRes.rows;
-        let customerName = 'Walk-in Customer';
+        let customer = null;
         if (invoice.customer_id) {
-          const cRes = await db.query('SELECT name FROM customers WHERE id = $1', [invoice.customer_id]);
-          if (cRes.rows[0]) customerName = cRes.rows[0].name;
+          const cRes = await db.query('SELECT * FROM customers WHERE id = $1', [invoice.customer_id]);
+          if (cRes.rows[0]) customer = cRes.rows[0];
         }
         cloneData = {
           customer_id: invoice.customer_id,
-          customer_name: customerName,
+          customer_name: customer ? customer.name : 'Walk-in Customer',
+          customer: customer,
           courier_charges: invoice.courier_charges,
           discount: invoice.discount_amount,
           payment_method: invoice.payment_method,
@@ -263,10 +264,10 @@ router.get('/:id/edit', async (req, res) => {
     const itemsRes = await db.query('SELECT * FROM invoice_items WHERE invoice_id = $1', [req.params.id]);
     const items = itemsRes.rows;
     
-    let customerName = null;
+    let customer = null;
     if (invoice.customer_id) {
-      const cRes = await db.query('SELECT name FROM customers WHERE id = $1', [invoice.customer_id]);
-      if (cRes.rows[0]) customerName = cRes.rows[0].name;
+      const cRes = await db.query('SELECT * FROM customers WHERE id = $1', [invoice.customer_id]);
+      if (cRes.rows[0]) customer = cRes.rows[0];
     }
 
     const processedItems = [];
@@ -289,7 +290,8 @@ router.get('/:id/edit', async (req, res) => {
 
     const cloneData = {
       customer_id: invoice.customer_id,
-      customer_name: customerName,
+      customer_name: customer ? customer.name : 'Walk-in Customer',
+      customer: customer,
       payment_method: invoice.payment_method,
       payment_status: invoice.payment_status,
       courier_charges: invoice.courier_charges,

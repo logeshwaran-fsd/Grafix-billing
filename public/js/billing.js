@@ -108,21 +108,27 @@ document.addEventListener('DOMContentLoaded', () => {
       const q = e.target.value.trim();
       if (q.length < 1) {
         custDropdown.style.display = 'none';
-        custId.value = '';
         return;
       }
       const res = await fetch(`/customers/api/search?q=${encodeURIComponent(q)}`);
       const customers = await res.json();
       if (customers.length > 0) {
-        custDropdown.innerHTML = customers.map(c => `
-          <div class="dropdown-item" onclick="selectCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}', ${c.balance || 0})">
-            <span>${c.name}</span>
-            <span>${c.phone || ''}</span>
+        custDropdown.innerHTML = customers.map(c => {
+          const addressParts = [c.address, c.city, c.pincode].filter(Boolean).join(', ');
+          const gstinBadge = c.gstin ? `<span class="badge badge-default" style="font-size:10px; margin-left:6px;">GST: ${c.gstin}</span>` : '';
+          return `
+          <div class="dropdown-item" onclick="selectCustomer(${JSON.stringify(c).replace(/"/g, '&quot;')})" style="padding:8px 12px; border-bottom:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="fw-bold" style="color:var(--text-primary); font-size:14px;">${c.name} ${gstinBadge}</span>
+              <span style="font-weight:600; font-size:12px; color:var(--accent);">${c.phone || ''}</span>
+            </div>
+            ${addressParts ? `<div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">${addressParts}</div>` : ''}
           </div>
-        `).join('');
+        `}).join('');
         custDropdown.style.display = 'block';
       } else {
-        custDropdown.style.display = 'none';
+        custDropdown.innerHTML = '<div class="dropdown-item" style="padding:10px 12px; color:var(--text-secondary);">No existing customer found. Click "+" to add new.</div>';
+        custDropdown.style.display = 'block';
       }
     }, 250));
 
@@ -130,12 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
         handleDropdownNav(e, custDropdown, () => {
           if (custSearch.value.trim() !== '') {
-            // Open quick add customer modal
-            document.getElementById('quick-cust-name').value = custSearch.value.trim();
-            document.getElementById('quick-cust-phone').value = '';
-            document.getElementById('quick-cust-city').value = 'Chennai';
-            document.getElementById('quick-customer-modal').style.display = 'flex';
-            document.getElementById('quick-cust-phone').focus();
+            // Open quick add customer modal with prefilled name
+            openQuickCustModal();
           } else {
             document.getElementById('payment-method').focus();
           }
@@ -151,11 +153,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Handle invoice cloning on load
+  // Handle invoice cloning / edit on load
   if (typeof CLONE_DATA !== 'undefined' && CLONE_DATA) {
-    if (CLONE_DATA.customer_id) {
-      document.getElementById('customer-id').value = CLONE_DATA.customer_id;
-      document.getElementById('customer-search').value = CLONE_DATA.customer_name || 'Walk-in Customer';
+    if (CLONE_DATA.customer) {
+      selectCustomer(CLONE_DATA.customer);
+    } else if (CLONE_DATA.customer_id) {
+      selectCustomer({
+        id: CLONE_DATA.customer_id,
+        name: CLONE_DATA.customer_name || 'Walk-in Customer',
+        balance: 0
+      });
     }
     document.getElementById('payment-method').value = CLONE_DATA.payment_method || 'cash';
     document.getElementById('payment-status').value = CLONE_DATA.payment_status || 'paid';
@@ -188,10 +195,49 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function selectCustomer(id, name, balance = 0) {
-  document.getElementById('customer-id').value = id;
-  document.getElementById('customer-search').value = name;
-  document.getElementById('customer-dropdown').style.display = 'none';
+function selectCustomer(custOrId, nameFallback, balanceFallback = 0) {
+  let cust = null;
+  if (typeof custOrId === 'object' && custOrId !== null) {
+    cust = custOrId;
+  } else {
+    cust = {
+      id: custOrId,
+      name: nameFallback,
+      balance: balanceFallback
+    };
+  }
+
+  document.getElementById('customer-id').value = cust.id || '';
+  document.getElementById('customer-search').value = cust.name || '';
+  const custDropdown = document.getElementById('customer-dropdown');
+  if (custDropdown) custDropdown.style.display = 'none';
+
+  // Populate Selected Customer Card
+  const card = document.getElementById('selected-customer-card');
+  const cardName = document.getElementById('card-cust-name');
+  const cardPhone = document.getElementById('card-cust-phone');
+  const cardAddress = document.getElementById('card-cust-address');
+  const cardGstin = document.getElementById('card-cust-gstin-badge');
+
+  if (card && cust.id) {
+    if (cardName) cardName.textContent = cust.name || 'Walk-in Customer';
+    if (cardPhone) cardPhone.textContent = 'Phone: ' + (cust.phone || '-');
+    
+    const addressFull = [cust.address, cust.city, cust.state, cust.pincode].filter(Boolean).join(', ');
+    if (cardAddress) cardAddress.textContent = 'Address: ' + (addressFull || '-');
+    
+    if (cardGstin) {
+      if (cust.gstin) {
+        cardGstin.textContent = 'GST: ' + cust.gstin;
+        cardGstin.style.display = 'inline-block';
+      } else {
+        cardGstin.style.display = 'none';
+      }
+    }
+    card.style.display = 'block';
+  } else if (card) {
+    card.style.display = 'none';
+  }
   
   const walletSection = document.getElementById('wallet-section');
   const walletBalanceDisplay = document.getElementById('wallet-balance-display');
@@ -199,20 +245,35 @@ function selectCustomer(id, name, balance = 0) {
   const customerWalletBalance = document.getElementById('customer-wallet-balance');
   
   // Balance is negative if the customer has an advance (wallet)
+  const balance = parseFloat(cust.balance) || 0;
   if (balance < 0) {
     const advance = Math.abs(balance);
-    walletSection.style.display = 'block';
-    walletBalanceDisplay.textContent = '₹' + advance.toFixed(2);
-    customerWalletBalance.value = advance;
-    applyWalletCheckbox.checked = false; // default to unchecked
+    if (walletSection) walletSection.style.display = 'block';
+    if (walletBalanceDisplay) walletBalanceDisplay.textContent = '₹' + advance.toFixed(2);
+    if (customerWalletBalance) customerWalletBalance.value = advance;
+    if (applyWalletCheckbox) applyWalletCheckbox.checked = false;
   } else {
-    walletSection.style.display = 'none';
-    customerWalletBalance.value = 0;
-    applyWalletCheckbox.checked = false;
+    if (walletSection) walletSection.style.display = 'none';
+    if (customerWalletBalance) customerWalletBalance.value = 0;
+    if (applyWalletCheckbox) applyWalletCheckbox.checked = false;
   }
   
   calculateTotals();
-  document.getElementById('payment-method').focus();
+  const pm = document.getElementById('payment-method');
+  if (pm) pm.focus();
+}
+
+function clearSelectedCustomer() {
+  document.getElementById('customer-id').value = '';
+  document.getElementById('customer-search').value = '';
+  const card = document.getElementById('selected-customer-card');
+  if (card) card.style.display = 'none';
+  const walletSection = document.getElementById('wallet-section');
+  if (walletSection) walletSection.style.display = 'none';
+  const customerWalletBalance = document.getElementById('customer-wallet-balance');
+  if (customerWalletBalance) customerWalletBalance.value = 0;
+  calculateTotals();
+  document.getElementById('customer-search').focus();
 }
 
 let pendingProductToAdd = null;
@@ -621,11 +682,23 @@ async function submitQuickStock() {
 }
 
 function openQuickCustModal() {
-  document.getElementById('quick-cust-name').value = document.getElementById('customer-search').value.trim();
+  const currentSearch = document.getElementById('customer-search').value.trim();
+  document.getElementById('quick-cust-name').value = currentSearch;
   document.getElementById('quick-cust-phone').value = '';
+  document.getElementById('quick-cust-address').value = '';
   document.getElementById('quick-cust-city').value = 'Chennai';
+  document.getElementById('quick-cust-state').value = 'Tamil Nadu';
+  document.getElementById('quick-cust-pincode').value = '';
+  document.getElementById('quick-cust-gstin').value = '';
+  document.getElementById('quick-cust-email').value = '';
+  document.getElementById('quick-cust-balance').value = '0';
+  
   document.getElementById('quick-customer-modal').style.display = 'flex';
-  document.getElementById('quick-cust-phone').focus();
+  if (currentSearch) {
+    document.getElementById('quick-cust-phone').focus();
+  } else {
+    document.getElementById('quick-cust-name').focus();
+  }
 }
 
 function closeQuickCustModal() {
@@ -636,25 +709,35 @@ function closeQuickCustModal() {
 async function submitQuickCust() {
   const name = document.getElementById('quick-cust-name').value.trim();
   const phone = document.getElementById('quick-cust-phone').value.trim();
+  const address = document.getElementById('quick-cust-address').value.trim();
   const city = document.getElementById('quick-cust-city').value.trim();
+  const state = document.getElementById('quick-cust-state').value.trim();
+  const pincode = document.getElementById('quick-cust-pincode').value.trim();
+  const gstin = document.getElementById('quick-cust-gstin').value.trim();
+  const email = document.getElementById('quick-cust-email').value.trim();
+  const opening_balance = parseFloat(document.getElementById('quick-cust-balance').value) || 0;
   
   if (!name) return alert('Customer Name is required!');
+  if (!phone) return alert('Customer Phone number is required!');
   
   try {
     const res = await fetch('/customers/api/quick-add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, city })
+      body: JSON.stringify({ 
+        name, phone, address, city, state, pincode, gstin, email, opening_balance 
+      })
     });
     const result = await res.json();
-    if (result.success) {
+    if (result.success && result.customer) {
       closeQuickCustModal();
-      selectCustomer(result.customer.id, result.customer.name);
+      selectCustomer(result.customer);
     } else {
       alert(result.error || 'Failed to add customer');
     }
   } catch(err) {
-    alert('Error saving customer');
+    console.error(err);
+    alert('Error saving customer: ' + err.message);
   }
 }
 
