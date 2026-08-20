@@ -181,7 +181,7 @@ router.post('/add', async (req, res) => {
       total_stock += stock;
     }
 
-    await db.query(`
+    const insertRes = await db.query(`
       INSERT INTO products (code, name, category_id, unit_price, cost_price, stock_quantity, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description, is_active) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 1)
       ON CONFLICT (code) DO UPDATE SET
@@ -197,7 +197,16 @@ router.post('/add', async (req, res) => {
         gst_rate = EXCLUDED.gst_rate,
         description = EXCLUDED.description,
         is_active = 1
+      RETURNING id, stock_quantity
     `, [code, name, category_id || null, unit_price, cost_price, total_stock, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description]);
+    
+    if (total_stock > 0 && insertRes.rows.length > 0) {
+      await db.query(`
+        INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
+        VALUES ($1, 'purchase', $2, 'Initial stock on product creation', $3)
+      `, [insertRes.rows[0].id, total_stock, req.session.user ? req.session.user.id : null]);
+    }
+
     req.session.success = 'Product added successfully!';
     res.redirect('/products');
   } catch (err) {
@@ -212,6 +221,7 @@ router.post('/api/quick-add', async (req, res) => {
   if (!code || !name) return res.status(400).json({ success: false, error: 'Code and Name are required' });
   try {
     const db = getDb();
+    const qty = parseInt(stock_quantity) || 0;
     const result = await db.query(`
       INSERT INTO products (code, name, unit_price, cost_price, stock_quantity, reorder_level, unit, gst_rate, is_active) 
       VALUES ($1, $2, $3, $4, $5, 10, 'pcs', $6, 1)
@@ -223,9 +233,17 @@ router.post('/api/quick-add', async (req, res) => {
         gst_rate = EXCLUDED.gst_rate,
         is_active = 1
       RETURNING *
-    `, [code, name, unit_price || 0, cost_price || 0, stock_quantity || 0, gst_rate || 18]);
+    `, [code, name, unit_price || 0, cost_price || 0, qty, gst_rate || 18]);
     const insertedProduct = result.rows[0];
-    res.json({ success: true, product: { id: insertedProduct.id, code, name, unit_price: unit_price || 0, stock_quantity: stock_quantity || 0, gst_rate: gst_rate || 18 } });
+
+    if (qty > 0) {
+      await db.query(`
+        INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
+        VALUES ($1, 'purchase', $2, 'Quick added product during billing', $3)
+      `, [insertedProduct.id, qty, req.session.user ? req.session.user.id : null]);
+    }
+
+    res.json({ success: true, product: { id: insertedProduct.id, code, name, unit_price: unit_price || 0, stock_quantity: qty, gst_rate: gst_rate || 18 } });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to add product (code might not be unique)' });
   }
@@ -248,6 +266,11 @@ router.post('/edit/:id', async (req, res) => {
   const { code, name, category_id, unit_price, cost_price, reorder_level, unit, hsn_code, gst_rate, description } = req.body;
   try {
     const db = getDb();
+    
+    // Fetch old stock for audit history tracking
+    const oldProductRes = await db.query('SELECT stock_quantity, branch_stocks FROM products WHERE id = $1', [req.params.id]);
+    const oldStock = oldProductRes.rows.length > 0 ? (oldProductRes.rows[0].stock_quantity || 0) : 0;
+
     const branchesRes = await db.query('SELECT name FROM branches');
     const branch_stocks = {};
     let total_stock = 0;
@@ -262,6 +285,17 @@ router.post('/edit/:id', async (req, res) => {
       SET code = $1, name = $2, category_id = $3, unit_price = $4, cost_price = $5, stock_quantity = $6, branch_stocks = $7, reorder_level = $8, unit = $9, hsn_code = $10, gst_rate = $11, description = $12, updated_at = CURRENT_TIMESTAMP
       WHERE id = $13
     `, [code, name, category_id || null, unit_price, cost_price, total_stock, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description, req.params.id]);
+
+    // Record stock change in stock_transactions if stock was modified
+    if (total_stock !== oldStock) {
+      const diff = total_stock - oldStock;
+      const type = diff > 0 ? 'purchase' : 'adjustment';
+      await db.query(`
+        INSERT INTO stock_transactions (product_id, type, quantity, notes, user_id)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [req.params.id, type, diff, `Product edit (Manual change from ${oldStock} to ${total_stock})`, req.session.user ? req.session.user.id : null]);
+    }
+
     const redirectUrl = req.body.redirect_to || req.query.redirect_to || '/products';
     if (req.xhr || req.headers.accept?.includes('json')) {
       return res.json({ success: true, message: 'Product updated successfully!' });

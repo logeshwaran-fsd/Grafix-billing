@@ -148,19 +148,66 @@ router.post('/api/adjust/:id', async (req, res) => {
 });
 
 router.get('/transactions', async (req, res) => {
+  const search = req.query.search || '';
+  const type = req.query.type || '';
+  const page = parseInt(req.query.page) || 1;
+  const limit = 50;
+  const offset = (page - 1) * limit;
+
   try {
     const db = getDb();
+    let whereClauses = [];
+    let params = [];
+    let pIdx = 1;
+
+    if (search) {
+      whereClauses.push(`(p.name ILIKE $${pIdx} OR p.code ILIKE $${pIdx} OR t.notes ILIKE $${pIdx})`);
+      params.push(`%${search}%`);
+      pIdx++;
+    }
+
+    if (type) {
+      whereClauses.push(`t.type = $${pIdx}`);
+      params.push(type);
+      pIdx++;
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const countRes = await db.query(`
+      SELECT COUNT(*) as count 
+      FROM stock_transactions t
+      JOIN products p ON t.product_id = p.id
+      ${whereSql}
+    `, params);
+    const totalCount = parseInt(countRes.rows[0].count, 10);
+    const totalPages = Math.ceil(totalCount / limit) || 1;
+
+    const limitIdx = pIdx++;
+    const offsetIdx = pIdx++;
+    params.push(limit, offset);
+
     const transactionsRes = await db.query(`
       SELECT t.*, p.name as product_name, p.code as product_code, u.full_name as user_name
       FROM stock_transactions t
       JOIN products p ON t.product_id = p.id
       LEFT JOIN users u ON t.user_id = u.id
+      ${whereSql}
       ORDER BY t.created_at DESC
-      LIMIT 100
-    `);
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `, params);
+
     const transactions = transactionsRes.rows;
-    res.render('inventory/transactions', { pageTitle: 'Stock Transactions', activePage: 'inventory', transactions });
+    res.render('inventory/transactions', { 
+      pageTitle: 'Stock Transaction History', 
+      activePage: 'inventory', 
+      transactions,
+      search,
+      selectedType: type,
+      pagination: { page, totalPages, totalCount }
+    });
   } catch (err) {
+    console.error(err);
     res.redirect('/inventory');
   }
 });
