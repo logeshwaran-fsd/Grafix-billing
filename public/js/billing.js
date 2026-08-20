@@ -115,19 +115,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (customers.length > 0) {
         custDropdown.innerHTML = customers.map(c => {
           const addressParts = [c.address, c.city, c.pincode].filter(Boolean).join(', ');
-          const gstinBadge = c.gstin ? `<span class="badge badge-default" style="font-size:10px; margin-left:6px;">GST: ${c.gstin}</span>` : '';
+          const gstinBadge = c.gstin ? `<span class="badge badge-default" style="font-size:10px; margin-left:6px; background:#334155; color:#fff;">GST: ${c.gstin}</span>` : '';
           return `
-          <div class="dropdown-item" onclick="selectCustomer(${JSON.stringify(c).replace(/"/g, '&quot;')})" style="padding:8px 12px; border-bottom:1px solid var(--border);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span class="fw-bold" style="color:var(--text-primary); font-size:14px;">${c.name} ${gstinBadge}</span>
-              <span style="font-weight:600; font-size:12px; color:var(--accent);">${c.phone || ''}</span>
+          <div class="dropdown-item customer-search-item" onclick="selectCustomer(${JSON.stringify(c).replace(/"/g, '&quot;')})" style="padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; text-align:left; display:block;">
+            <div style="font-weight:700; color:var(--text-primary); font-size:14px; line-height:1.3;">
+              ${c.name} ${gstinBadge}
             </div>
-            ${addressParts ? `<div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">${addressParts}</div>` : ''}
+            ${addressParts ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:3px; line-height:1.35; word-break:break-word;">${addressParts}</div>` : ''}
+            ${c.phone ? `<div style="font-size:12px; font-weight:700; color:var(--accent); margin-top:3px;">Phone: ${c.phone}</div>` : ''}
           </div>
         `}).join('');
         custDropdown.style.display = 'block';
       } else {
-        custDropdown.innerHTML = '<div class="dropdown-item" style="padding:10px 12px; color:var(--text-secondary);">No existing customer found. Click "+" to add new.</div>';
+        custDropdown.innerHTML = '<div class="dropdown-item" style="padding:12px 14px; color:var(--text-secondary); text-align:center;">No existing customer found. Click "+" to add new.</div>';
         custDropdown.style.display = 'block';
       }
     }, 250));
