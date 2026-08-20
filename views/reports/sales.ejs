@@ -1,84 +1,191 @@
 <%- include('../partials/head') %>
 <%- include('../partials/sidebar', { activePage: 'reports' }) %>
 <div class="main-content">
-  <%- include('../partials/header', { pageTitle: 'Sales Reports' }) %>
+  <%- include('../partials/header', { pageTitle: 'Sales Reports & Stock Sold' }) %>
   <%- include('../partials/alerts') %>
   <div class="content-area">
-    <div class="mb-4 d-flex justify-between align-center" style="flex-wrap:wrap; gap:12px;">
-      <a href="/reports" class="btn btn-secondary btn-sm">← Back to Reports</a>
-      <div class="d-flex align-center gap-2" style="flex-wrap:wrap;">
-        <form action="/reports/sales" method="GET" class="form-inline" style="margin:0;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="small text-secondary" style="margin-bottom:2px;">From</label>
-            <input type="date" name="from" class="form-control" value="<%= from %>">
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="small text-secondary" style="margin-bottom:2px;">To</label>
-            <input type="date" name="to" class="form-control" value="<%= to %>">
-          </div>
-          <button type="submit" class="btn btn-primary">Run Report</button>
-        </form>
-        <a href="/reports/export/sales?from=<%= from %>&to=<%= to %>" class="btn btn-success" style="background:#10b981; border:none; padding:10px 16px; font-weight:600;">Download Excel</a>
-      </div>
+    <!-- Filter Bar -->
+    <div class="card mb-4" style="padding: 16px 20px;">
+      <form action="/reports/sales" method="GET" style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+        <div class="form-group" style="margin-bottom:0; min-width:140px;">
+          <label class="small text-secondary fw-bold" style="margin-bottom:4px; display:block;">From Date</label>
+          <input type="date" name="from" class="form-control" value="<%= from %>" style="height:38px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:0; min-width:140px;">
+          <label class="small text-secondary fw-bold" style="margin-bottom:4px; display:block;">To Date</label>
+          <input type="date" name="to" class="form-control" value="<%= to %>" style="height:38px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:200px;">
+          <label class="small text-secondary fw-bold" style="margin-bottom:4px; display:block;">Filter by Product / Item</label>
+          <select name="product_id" class="form-control" style="height:38px;">
+            <option value="">All Products</option>
+            <% if (typeof productsList !== 'undefined') { %>
+              <% productsList.forEach(p => { %>
+                <option value="<%= p.id %>" <%= selectedProduct == p.id ? 'selected' : '' %>>
+                  <%= p.code %> - <%= p.name %>
+                </option>
+              <% }) %>
+            <% } %>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0; width:160px;">
+          <label class="small text-secondary fw-bold" style="margin-bottom:4px; display:block;">Brand / Category</label>
+          <select name="category_id" class="form-control" style="height:38px;">
+            <option value="">All Brands</option>
+            <% if (typeof categoriesList !== 'undefined') { %>
+              <% categoriesList.forEach(c => { %>
+                <option value="<%= c.id %>" <%= selectedCategory == c.id ? 'selected' : '' %>><%= c.name %></option>
+              <% }) %>
+            <% } %>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0; width:140px;">
+          <label class="small text-secondary fw-bold" style="margin-bottom:4px; display:block;">Branch</label>
+          <select name="branch" class="form-control" style="height:38px;">
+            <option value="">All Branches</option>
+            <% if (typeof branchesList !== 'undefined') { %>
+              <% branchesList.forEach(b => { %>
+                <option value="<%= b %>" <%= selectedBranch === b ? 'selected' : '' %>><%= b %></option>
+              <% }) %>
+            <% } %>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <button type="submit" class="btn btn-primary" style="height:38px; padding:0 18px; white-space:nowrap;">Run Report</button>
+          <% if (selectedProduct || selectedCategory || selectedBranch) { %>
+            <a href="/reports/sales?from=<%= from %>&to=<%= to %>" class="btn btn-secondary" style="height:38px; padding:0 14px; display:inline-flex; align-items:center; white-space:nowrap;">Reset Filter</a>
+          <% } %>
+          <a href="/reports/export/sales?from=<%= from %>&to=<%= to %>&product_id=<%= selectedProduct %>&category_id=<%= selectedCategory %>&branch=<%= selectedBranch %>" class="btn btn-success" style="background:#10b981; border:none; height:38px; padding:0 16px; font-weight:600; display:inline-flex; align-items:center; white-space:nowrap;">Download Excel</a>
+        </div>
+      </form>
     </div>
 
-    <div class="grid grid-3" style="margin-bottom:24px;">
+    <!-- Summary Metrics -->
+    <div class="grid grid-4" style="margin-bottom:24px;">
       <div class="card stat-card accent-teal">
-        <div class="stat-value">₹<%= (summary.total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
+        <div class="stat-value">₹<%= Number(summary.total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
         <div class="stat-label">Total Revenue</div>
       </div>
-      <div class="card stat-card accent-blue">
-        <div class="stat-value"><%= summary.count || 0 %></div>
-        <div class="stat-label">Total Invoices Raised</div>
-      </div>
       <div class="card stat-card accent-purple">
-        <div class="stat-value">₹<%= (summary.count > 0 ? (summary.total / summary.count) : 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
-        <div class="stat-label">Average Order Value</div>
+        <div class="stat-value" style="color:var(--accent);"><%= Number(summary.total_qty_sold || 0).toLocaleString('en-IN') %></div>
+        <div class="stat-label">Total Stock Quantity Sold</div>
+      </div>
+      <div class="card stat-card accent-blue">
+        <div class="stat-value"><%= Number(summary.count || 0).toLocaleString('en-IN') %></div>
+        <div class="stat-label">Invoices Raised</div>
+      </div>
+      <div class="card stat-card accent-green">
+        <div class="stat-value">₹<%= Number(summary.tax || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></div>
+        <div class="stat-label">GST Tax Collected</div>
       </div>
     </div>
 
-    <div class="card" style="margin-bottom:24px;">
-      <div class="card-header"><h3 class="card-title">Daily Sales Trend</h3></div>
-      <div style="height:300px; position:relative;">
-        <canvas id="salesReportChart"></canvas>
+    <!-- Item-Wise Stock Sold Breakdown Table -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-between align-center">
+        <h3 class="card-title">Stock Sold by Product (Range: <%= new Date(from).toLocaleDateString('en-IN') %> to <%= new Date(to).toLocaleDateString('en-IN') %>)</h3>
+        <span class="badge badge-default"><%= (typeof itemSales !== 'undefined') ? itemSales.length : 0 %> Products Sold</span>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header"><h3 class="card-title">Detailed Sales Logs</h3></div>
       <div class="table-container">
         <table>
           <thead>
             <tr>
-              <th>Date</th>
-              <th class="text-center">Bills Count</th>
-              <th class="text-right">GST Collected</th>
+              <th style="width:40px;">#</th>
+              <th>Product Code</th>
+              <th>Product Name</th>
+              <th>Brand / Category</th>
+              <th class="text-center" style="color:var(--accent); font-weight:700;">Stock Sold (Qty)</th>
+              <th class="text-right">Avg Unit Price</th>
+              <th class="text-right">GST Tax</th>
               <th class="text-right">Total Revenue</th>
+              <th class="text-center">Current In-Stock</th>
             </tr>
           </thead>
           <tbody>
-            <% if (sales.length === 0) { %>
-              <tr><td colspan="4" class="table-empty">No sales data in selected date range</td></tr>
+            <% if (typeof itemSales === 'undefined' || itemSales.length === 0) { %>
+              <tr><td colspan="9" class="table-empty">No products sold in selected date range / filter</td></tr>
+            <% } else { %>
+              <% itemSales.forEach((item, idx) => { %>
+                <tr>
+                  <td><%= idx + 1 %></td>
+                  <td><span class="badge badge-default"><%= item.product_code %></span></td>
+                  <td class="fw-bold"><%= item.product_name %></td>
+                  <td><%= item.category_name %></td>
+                  <td class="text-center">
+                    <span class="badge badge-success" style="font-size:13px; font-weight:700; padding:4px 10px;">
+                      <%= Number(item.total_qty_sold) %> <%= item.unit || 'pcs' %>
+                    </span>
+                  </td>
+                  <td class="text-right text-muted">₹<%= parseFloat(item.avg_price || 0).toFixed(2) %></td>
+                  <td class="text-right text-muted">₹<%= parseFloat(item.total_tax || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></td>
+                  <td class="text-right fw-bold text-success">₹<%= parseFloat(item.total_revenue || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></td>
+                  <td class="text-center">
+                    <% if (item.current_stock <= 0) { %>
+                      <span class="badge badge-danger">0 (<%= item.unit %>)</span>
+                    <% } else { %>
+                      <span class="badge badge-default"><%= item.current_stock %> (<%= item.unit %>)</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
             <% } %>
-            <% sales.forEach(s => { %>
-              <tr>
-                <td class="fw-bold"><%= new Date(s.date).toLocaleDateString('en-IN') %></td>
-                <td class="text-center"><%= s.count %></td>
-                <td class="text-right text-muted">₹<%= s.tax.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></td>
-                <td class="text-right text-success fw-bold">₹<%= s.total.toLocaleString('en-IN', {minimumFractionDigits: 2}) %></td>
-              </tr>
-            <% }) %>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Daily Sales Trend Chart & Table -->
+    <div class="grid grid-2 mb-4" style="gap:24px;">
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Daily Sales Trend</h3></div>
+        <div style="height:280px; position:relative;">
+          <canvas id="salesReportChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Daily Sales Logs</h3></div>
+        <div class="table-container" style="max-height:280px; overflow-y:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="text-center">Bills</th>
+                <th class="text-center">Qty Sold</th>
+                <th class="text-right">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (sales.length === 0) { %>
+                <tr><td colspan="4" class="table-empty">No sales data</td></tr>
+              <% } %>
+              <% sales.forEach(s => { %>
+                <tr>
+                  <td class="fw-bold"><%= new Date(s.date).toLocaleDateString('en-IN') %></td>
+                  <td class="text-center"><%= s.count %></td>
+                  <td class="text-center"><span class="badge badge-default"><%= s.total_qty_sold || 0 %></span></td>
+                  <td class="text-right text-success fw-bold">₹<%= Number(s.total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const reportData = <%- JSON.stringify(sales) %>;
-    // Map backwards for left-to-right chronological order on line chart
-    initSalesReportChart([...reportData].reverse());
+    if (typeof initSalesReportChart === 'function') {
+      initSalesReportChart([...reportData].reverse());
+    }
   });
 </script>
 <%- include('../partials/footer') %>
