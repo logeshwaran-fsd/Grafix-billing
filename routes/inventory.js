@@ -24,17 +24,19 @@ router.get('/', async (req, res) => {
     const statsRes = await db.query(`
       SELECT 
         COUNT(id) as total,
-        SUM(CASE WHEN stock_quantity > reorder_level THEN 1 ELSE 0 END) as ok,
-        SUM(CASE WHEN stock_quantity <= reorder_level AND stock_quantity > 0 THEN 1 ELSE 0 END) as low,
-        SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) as out
+        COALESCE(SUM(CASE WHEN COALESCE(stock_quantity, 0) > COALESCE(reorder_level, 10) THEN 1 ELSE 0 END), 0) as ok,
+        COALESCE(SUM(CASE WHEN COALESCE(stock_quantity, 0) <= COALESCE(reorder_level, 10) AND COALESCE(stock_quantity, 0) > 0 THEN 1 ELSE 0 END), 0) as low,
+        COALESCE(SUM(CASE WHEN COALESCE(stock_quantity, 0) = 0 THEN 1 ELSE 0 END), 0) as out
       FROM products WHERE is_active = 1
     `);
+    const stats = statsRes.rows[0] || { total: 0, ok: 0, low: 0, out: 0 };
     const categoriesRes = await db.query('SELECT * FROM categories ORDER BY name ASC');
     const categories = categoriesRes.rows;
 
     res.render('inventory/stock', { pageTitle: 'Stock Overview', activePage: 'inventory', products, stats, search, branches, categories });
   } catch (err) {
-    res.status(500).render('error', { pageTitle: 'Error', message: 'Failed to load stock data', activePage: 'inventory' });
+    console.error('Error loading inventory stock page:', err);
+    res.status(500).render('error', { pageTitle: 'Error', message: 'Failed to load stock data: ' + err.message, activePage: 'inventory' });
   }
 });
 

@@ -92,7 +92,7 @@
                 <td class="no-print" style="white-space: nowrap; text-align: right;">
                   <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
                     <button type="button" class="btn btn-secondary btn-sm" 
-                            onclick='openEditProductModal(<%- JSON.stringify(prod) %>)'
+                            onclick="openEditProductModal('<%= prod.id %>')"
                             style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">
                       Edit
                     </button>
@@ -529,9 +529,14 @@ quickRestockForm.addEventListener('submit', async (e) => {
     alert('Failed to connect to the server.');
   } finally {
     modalSubmitBtn.disabled = false;
-    modalSubmitBtn.textContent = 'Update Stock 💾';
+    modalSubmitBtn.textContent = 'Update Stock';
   }
 });
+
+// Products map for safe modal population
+const PRODUCTS_LIST = <%- JSON.stringify(products) %>;
+const PRODUCTS_MAP = {};
+PRODUCTS_LIST.forEach(p => { PRODUCTS_MAP[p.id] = p; });
 
 // Edit Product Modal elements
 const editProductModal = document.getElementById('editProductModal');
@@ -550,9 +555,12 @@ document.querySelectorAll('.edit-branch-input').forEach(inp => {
   inp.addEventListener('input', updateEditTotalStock);
 });
 
-function openEditProductModal(prod) {
+function openEditProductModal(prodId) {
+  const prod = PRODUCTS_MAP[prodId];
+  if (!prod) return;
+
   editProductForm.action = '/products/edit/' + prod.id;
-  editModalHeaderTitle.textContent = `✏️ Edit: ${prod.name} (${prod.code})`;
+  editModalHeaderTitle.textContent = 'Edit: ' + prod.name + ' (' + prod.code + ')';
   
   document.getElementById('edit_code').value = prod.code || '';
   document.getElementById('edit_name').value = prod.name || '';
