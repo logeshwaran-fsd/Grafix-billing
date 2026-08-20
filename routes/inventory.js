@@ -29,9 +29,10 @@ router.get('/', async (req, res) => {
         SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) as out
       FROM products WHERE is_active = 1
     `);
-    const stats = statsRes.rows[0];
+    const categoriesRes = await db.query('SELECT * FROM categories ORDER BY name ASC');
+    const categories = categoriesRes.rows;
 
-    res.render('inventory/stock', { pageTitle: 'Stock Overview', activePage: 'inventory', products, stats, search, branches });
+    res.render('inventory/stock', { pageTitle: 'Stock Overview', activePage: 'inventory', products, stats, search, branches, categories });
   } catch (err) {
     res.status(500).render('error', { pageTitle: 'Error', message: 'Failed to load stock data', activePage: 'inventory' });
   }
@@ -130,7 +131,7 @@ router.post('/api/adjust/:id', async (req, res) => {
     const newStock = branch && newBranchStocks && newBranchStocks[branch] !== undefined ? newBranchStocks[branch] : newStockTotal;
     
     await client.query('COMMIT');
-    res.json({ success: true, newStock });
+    res.json({ success: true, newStock, newStockTotal, newBranchStocks, branch });
   } catch (err) {
     if (client) await client.query('ROLLBACK');
     res.status(500).json({ success: false, error: err.message });

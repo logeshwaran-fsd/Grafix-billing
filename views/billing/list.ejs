@@ -63,9 +63,11 @@
                     <span class="badge badge-danger">Cancelled</span>
                   <% } %>
                 </td>
-                <td class="no-print">
-                  <a href="/billing/<%= inv.id %>" class="btn btn-secondary btn-sm">View</a>
-                  <a href="/billing/<%= inv.id %>?download=true" class="btn btn-success btn-sm" title="Download PDF">PDF</a>
+                <td class="no-print" style="white-space: nowrap; text-align: right;">
+                  <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
+                    <a href="/billing/<%= inv.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">View 👁️</a>
+                    <a href="/billing/<%= inv.id %>?download=true" class="btn btn-success btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Download PDF">PDF 📥</a>
+                  </div>
                 </td>
               </tr>
             <% }) %>

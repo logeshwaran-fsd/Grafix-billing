@@ -296,6 +296,7 @@ router.get('/:id/edit', async (req, res) => {
       discount: invoice.discount_amount,
       invoice_type: invoice.invoice_type || 'gst',
       amount_paid: invoice.amount_paid,
+      date: invoice.created_at ? new Date(invoice.created_at).toISOString().split('T')[0] : '',
       items: processedItems
     };
     
@@ -397,8 +398,14 @@ router.post('/:id/edit', async (req, res) => {
       
       const final_amount_paid = amount_paid !== undefined ? parseFloat(amount_paid) : (payment_status === 'paid' ? net_payable : 0);
 
-      // Only update the date if explicitly provided in the request; otherwise keep the original invoice date
-      const parsedDate = invoice_date ? new Date(invoice_date) : oldInvoice.created_at;
+      // Preserve original invoice date unless explicitly changed to a different date
+      let parsedDate = oldInvoice.created_at;
+      if (invoice_date) {
+        const oldDateStr = new Date(oldInvoice.created_at).toISOString().split('T')[0];
+        if (invoice_date !== oldDateStr) {
+          parsedDate = new Date(invoice_date);
+        }
+      }
       // 4. APPLY new invoice
       await client.query(`
         UPDATE invoices SET customer_id=$1, user_id=$2, subtotal=$3, tax_amount=$4, discount_amount=$5, total_amount=$6, payment_method=$7, payment_status=$8, courier_charges=$9, invoice_type=$10, branch=$11, amount_paid=$12, created_at=$14

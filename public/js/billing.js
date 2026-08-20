@@ -519,9 +519,8 @@ async function submitInvoice() {
     apply_wallet: document.getElementById('apply-wallet') ? document.getElementById('apply-wallet').checked : false,
     items: invoiceItems
   };
-  // Only include invoice_date for NEW invoices. For edits, omit it so the server preserves the original date.
-  if (!isEditing) {
-    data.invoice_date = dateInputEl ? dateInputEl.value : new Date().toISOString().split('T')[0];
+  if (dateInputEl && dateInputEl.value) {
+    data.invoice_date = dateInputEl.value;
   }
 
   const btn = document.getElementById('submit-invoice-btn');

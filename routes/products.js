@@ -262,10 +262,17 @@ router.post('/edit/:id', async (req, res) => {
       SET code = $1, name = $2, category_id = $3, unit_price = $4, cost_price = $5, stock_quantity = $6, branch_stocks = $7, reorder_level = $8, unit = $9, hsn_code = $10, gst_rate = $11, description = $12, updated_at = CURRENT_TIMESTAMP
       WHERE id = $13
     `, [code, name, category_id || null, unit_price, cost_price, total_stock, branch_stocks, reorder_level, unit, hsn_code, gst_rate, description, req.params.id]);
+    const redirectUrl = req.body.redirect_to || req.query.redirect_to || '/products';
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.json({ success: true, message: 'Product updated successfully!' });
+    }
     req.session.success = 'Product updated successfully!';
-    res.redirect('/products');
+    res.redirect(redirectUrl);
   } catch (err) {
     console.error(err);
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.status(500).json({ success: false, error: 'Failed to update product: ' + err.message });
+    }
     req.session.error = 'Failed to update product';
     res.redirect(`/products/edit/${req.params.id}`);
   }
@@ -278,7 +285,8 @@ router.post('/delete/:id', async (req, res) => {
   } catch (err) {
     req.session.error = 'Failed to delete product';
   }
-  res.redirect('/products');
+  const redirectUrl = req.body.redirect_to || req.query.redirect_to || '/products';
+  res.redirect(redirectUrl);
 });
 
 router.post('/bulk-delete', async (req, res) => {

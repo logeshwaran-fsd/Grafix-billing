@@ -4,19 +4,19 @@
   <%- include('../partials/header', { pageTitle: 'Customers' }) %>
   <%- include('../partials/alerts') %>
   <div class="content-area">
-    <div class="mb-3 d-flex justify-between align-center">
-      <form action="/customers" method="GET" class="form-inline flex-grow-1" style="max-width:400px;">
-        <input type="text" name="search" class="form-control" placeholder="Search name, phone, city..." value="<%= search %>">
-        <button type="submit" class="btn btn-primary">Search</button>
+    <div class="mb-3 d-flex justify-between align-center" style="flex-wrap: wrap; gap: 12px;">
+      <form action="/customers" method="GET" class="form-inline flex-grow-1" style="max-width:450px; display:flex; gap:8px; align-items:center;">
+        <input type="text" name="search" class="form-control" placeholder="Search name, phone, city..." value="<%= search %>" style="flex:1;">
+        <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Search</button>
         <% if (search) { %>
-          <a href="/customers" class="btn btn-secondary">Clear</a>
+          <a href="/customers" class="btn btn-secondary" style="padding: 8px 16px;">Clear</a>
         <% } %>
       </form>
-      <div class="btn-group">
-        <button type="button" class="btn btn-secondary" onclick="openCustImportModal()">Import Excel 👥</button>
-        <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDeleteCustomers()">Delete Selected</button>
-        <button type="button" class="btn btn-danger" style="background:#b91c1c; font-weight:600;" onclick="deleteAllCustomers()">Delete All 🗑️</button>
-        <a href="/customers/add" class="btn btn-primary">+ Add Customer</a>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary" onclick="openCustImportModal()" style="padding:8px 14px;">Import Excel 👥</button>
+        <button type="button" class="btn btn-danger" id="btn-bulk-delete" disabled onclick="bulkDeleteCustomers()" style="padding:8px 14px;">Delete Selected</button>
+        <button type="button" class="btn btn-danger" style="background:#b91c1c; font-weight:600; padding:8px 14px;" onclick="deleteAllCustomers()">Delete All 🗑️</button>
+        <a href="/customers/add" class="btn btn-primary" style="padding:8px 16px;">+ Add Customer</a>
       </div>
     </div>
 
@@ -68,11 +68,11 @@
                 <td><%= cust.city %></td>
                 <td><%= cust.state %></td>
                 <td><span class="badge badge-default"><%= cust.gstin || '-' %></span></td>
-                <td class="no-print">
-                  <div class="btn-group">
-                    <a href="/customers/edit/<%= cust.id %>" class="btn btn-secondary btn-sm">Edit</a>
-                    <form action="/customers/delete/<%= cust.id %>" method="POST" class="confirm-delete d-inline">
-                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                <td class="no-print" style="white-space: nowrap; text-align: right;">
+                  <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
+                    <a href="/customers/edit/<%= cust.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">Edit ✏️</a>
+                    <form action="/customers/delete/<%= cust.id %>" method="POST" class="confirm-delete d-inline" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete customer <%= cust.name.replace(/'/g, `\\'`) %>?')">
+                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">Delete 🗑️</button>
                     </form>
                   </div>
                 </td>

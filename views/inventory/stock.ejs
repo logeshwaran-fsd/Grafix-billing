@@ -23,15 +23,18 @@
       </div>
     </div>
 
-    <div class="mb-3 d-flex justify-between align-center">
-      <form action="/inventory" method="GET" class="form-inline flex-grow-1" style="max-width:400px;">
-        <input type="text" name="search" class="form-control" placeholder="Search by name, code..." value="<%= search %>">
-        <button type="submit" class="btn btn-primary">Search</button>
+    <div class="mb-3 d-flex justify-between align-center" style="flex-wrap: wrap; gap: 12px;">
+      <form action="/inventory" method="GET" class="form-inline flex-grow-1" style="max-width:500px; display:flex; gap:8px; align-items:center;">
+        <input type="text" name="search" class="form-control" placeholder="Search by name, code..." value="<%= search %>" style="flex:1;">
+        <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Search</button>
         <% if (search) { %>
-          <a href="/inventory" class="btn btn-secondary">Clear</a>
+          <a href="/inventory" class="btn btn-secondary" style="padding: 8px 16px;">Clear</a>
         <% } %>
       </form>
-      <a href="/inventory/transactions" class="btn btn-secondary">Stock Transaction Logs</a>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <a href="/inventory/transactions" class="btn btn-secondary" style="padding: 8px 16px;">Stock Transaction Logs</a>
+        <a href="/products/add" class="btn btn-primary" style="padding: 8px 16px;">+ Add Product</a>
+      </div>
     </div>
 
     <div class="card">
@@ -41,7 +44,7 @@
             <tr>
               <th>Code</th>
               <th>Product Name</th>
-              <th>Category</th>
+              <th>Category / Brand</th>
               <th>Total Stock</th>
               <% if (typeof branches !== 'undefined') { %>
                 <% branches.forEach(b => { %>
@@ -51,7 +54,7 @@
               <th>Reorder Level</th>
               <th>Unit</th>
               <th>Status</th>
-              <th class="no-print">Actions</th>
+              <th class="no-print" style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -62,11 +65,11 @@
               <tr data-id="<%= prod.id %>">
                 <td><span class="badge badge-default"><%= prod.code %></span></td>
                 <td class="fw-bold"><%= prod.name %></td>
-                <td><%= prod.category_name || 'Uncategorized' %></td>
+                <td><%= prod.category_name || 'Unbranded' %></td>
                 <td><strong class="fs-lg stock-qty-value" style="color:var(--accent);"><%= prod.stock_quantity %></strong></td>
                 <% if (typeof branches !== 'undefined') { %>
                   <% branches.forEach(b => { %>
-                    <td>
+                    <td class="branch-stock-cell" data-branch="<%= b %>">
                       <span class="badge badge-default" style="background:#334155; color:#f8fafc; font-size:12px;">
                         <%= (prod.branch_stocks && prod.branch_stocks[b] !== undefined) ? prod.branch_stocks[b] : 0 %>
                       </span>
@@ -79,7 +82,6 @@
                   <div class="status-cell-wrapper">
                     <% if (prod.stock_quantity <= 0) { %>
                       <span class="badge badge-danger">Out of Stock</span>
-                      <button class="btn btn-danger btn-sm restock-badge-btn" onclick="openRestockModal('<%= prod.id %>', '<%= prod.name.replace(/'/g, `\\'`).replace(/"/g, `\\\"`) %>', '<%= prod.code %>', <%= prod.stock_quantity %>, this)" style="padding: 2px 6px; font-size: 10px; font-weight:700; width:100%; border:none; background:#ef4444; margin-top:4px; display:block; text-align:center; border-radius:4px; cursor:pointer;">RESTOCK ➕</button>
                     <% } else if (prod.stock_quantity <= prod.reorder_level) { %>
                       <span class="badge badge-warning">Low Stock</span>
                     <% } else { %>
@@ -87,14 +89,27 @@
                     <% } %>
                   </div>
                 </td>
-                <td class="no-print">
-                  <div style="display:flex; gap:6px;">
-                    <a href="/inventory/adjust/<%= prod.id %>" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:12px;">History</a>
-                    <button class="btn btn-success btn-sm" 
+                <td class="no-print" style="white-space: nowrap; text-align: right;">
+                  <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary btn-sm" 
+                            onclick='openEditProductModal(<%- JSON.stringify(prod) %>)'
+                            style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                      Edit ✏️
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" 
                             onclick="openRestockModal('<%= prod.id %>', '<%= prod.name.replace(/'/g, `\\'`).replace(/"/g, `\\\"`) %>', '<%= prod.code %>', <%= prod.stock_quantity %>, this)"
-                            style="background:var(--success); border:none; padding:4px 8px; font-size:12px; font-weight:600; cursor:pointer; color:#fff; border-radius:6px;">
+                            style="background: var(--success); border: none; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: #fff; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                       Quick Add ➕
                     </button>
+                    <a href="/inventory/adjust/<%= prod.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                      History 📜
+                    </a>
+                    <form action="/products/delete/<%= prod.id %>" method="POST" class="confirm-delete d-inline" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete <%= prod.name.replace(/'/g, `\\'`) %>?')">
+                      <input type="hidden" name="redirect_to" value="/inventory">
+                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                        Delete 🗑️
+                      </button>
+                    </form>
                   </div>
                 </td>
               </tr>
@@ -115,24 +130,31 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(5px);
   z-index: 2000;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+  overflow-y: auto;
+  padding: 20px 10px;
 }
 
 .modal-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--border-radius);
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
   width: 100%;
-  max-width: 500px;
-  padding: 30px;
-  box-shadow: var(--shadow-lg);
+  max-width: 540px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
   transform: translateY(-20px);
   transition: all 0.3s ease;
+}
+
+.modal-card.modal-card-lg {
+  max-width: 750px;
 }
 
 .modal-card.show {
@@ -143,40 +165,87 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 15px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
 }
 
 .modal-header h3 {
   font-size: 18px;
   font-weight: 700;
-  color: var(--accent);
+  color: #0f172a !important;
+  margin: 0;
 }
 
 .modal-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: #64748b;
   font-size: 24px;
   cursor: pointer;
+  line-height: 1;
   transition: color 0.2s;
 }
 
 .modal-close:hover {
-  color: var(--danger);
+  color: #dc2626;
 }
 
+/* Quick Add & Edit Modal high-contrast styles */
 .modal-body .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 14px;
 }
 
 .modal-body label {
   display: block;
   font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-  font-weight: 500;
+  color: #1e293b !important;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.modal-body input.form-control,
+.modal-body select.form-control,
+.modal-body textarea.form-control {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.modal-body select.form-control option {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+.modal-body input.form-control:focus,
+.modal-body select.form-control:focus,
+.modal-body textarea.form-control:focus {
+  border-color: #0284c7 !important;
+  outline: 2px solid rgba(2, 132, 199, 0.2) !important;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .form-grid-2, .form-grid-3 {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 
@@ -184,42 +253,162 @@
 <div class="modal-overlay" id="restockModal">
   <div class="modal-card">
     <div class="modal-header">
-      <h3 id="modalProductTitle">Quick Stock Adjustment</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <h3 id="modalProductTitle">⚡ Quick Stock Adjustment</h3>
+      <button class="modal-close" onclick="closeRestockModal()">&times;</button>
     </div>
     <form id="quickRestockForm">
       <input type="hidden" id="modalProductId">
       <div class="modal-body">
         <div class="form-group">
           <label>Product Details</label>
-          <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span id="modalProductCode" class="badge badge-default">CODE</span>
-              <span style="font-weight: 500; font-size:13px;">Current Stock: <strong id="modalCurrentStock" style="color:var(--accent);">0</strong></span>
+              <span id="modalProductCode" class="badge badge-default" style="background:#0284c7; color:#fff; font-weight:700;">CODE</span>
+              <span style="font-weight: 600; font-size:13px; color:#0f172a;">Current Total Stock: <strong id="modalCurrentStock" style="color:#0284c7; font-size:15px;">0</strong></span>
             </div>
-            <div id="modalProductName" style="margin-top:8px; font-weight:700; font-size:15px; color:#fff;">Product Name</div>
+            <div id="modalProductName" style="margin-top:6px; font-weight:700; font-size:15px; color:#0f172a;">Product Name</div>
           </div>
         </div>
+
         <div class="form-group">
-          <label for="modalQuantity">Quantity to Add *</label>
-          <input type="number" id="modalQuantity" class="form-control" placeholder="Enter quantity (e.g. 50)" required min="1" autofocus style="width:100%; height:42px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:10px; color:#fff; font-size:15px;">
-        </div>
-        <div class="form-group">
-          <label for="modalType">Adjustment Type</label>
-          <select id="modalType" class="form-control" style="width:100%; height:42px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:10px; color:#fff; font-size:15px;">
-            <option value="purchase" selected>Purchase (Restocking)</option>
-            <option value="return">Customer Return</option>
-            <option value="adjustment">Manual Adjustment (+)</option>
+          <label for="modalBranch">Add / Adjust Stock For Branch *</label>
+          <select id="modalBranch" class="form-control" required style="height:40px;">
+            <% if (typeof branches !== 'undefined') { %>
+              <% branches.forEach(b => { %>
+                <option value="<%= b %>"><%= b %></option>
+              <% }) %>
+            <% } %>
           </select>
         </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="modalQuantity">Quantity *</label>
+            <input type="number" id="modalQuantity" class="form-control" placeholder="e.g. 50" required min="1" autofocus style="height:40px;">
+          </div>
+          <div class="form-group">
+            <label for="modalType">Adjustment Type</label>
+            <select id="modalType" class="form-control" style="height:40px;">
+              <option value="purchase" selected>Purchase (Restocking) (+)</option>
+              <option value="return">Customer Return (+)</option>
+              <option value="adjustment">Manual Adjustment (+)</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="modalNotes">Notes / Reference</label>
-          <input type="text" id="modalNotes" class="form-control" placeholder="e.g. Supplier Invoice #1024" value="Quick restock" style="width:100%; height:42px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:10px; color:#fff; font-size:15px;">
+          <input type="text" id="modalNotes" class="form-control" placeholder="e.g. Purchase Invoice #1024" value="Quick restock" style="height:40px;">
         </div>
       </div>
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()" style="padding:8px 16px;">Cancel</button>
-        <button type="submit" class="btn btn-success" id="modalSubmitBtn" style="padding:8px 16px; background:var(--success); border:none; color:#fff; font-weight:600; border-radius:6px; cursor:pointer;">Update Stock</button>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #e2e8f0; padding-top:15px;">
+        <button type="button" class="btn btn-secondary" onclick="closeRestockModal()" style="padding:8px 18px; color:#000;">Cancel</button>
+        <button type="submit" class="btn btn-success" id="modalSubmitBtn" style="padding:8px 20px; background:#10b981; border:none; color:#fff; font-weight:700; border-radius:6px; cursor:pointer;">Update Stock 💾</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Product Dialog Box Modal -->
+<div class="modal-overlay" id="editProductModal">
+  <div class="modal-card modal-card-lg">
+    <div class="modal-header">
+      <h3 id="editModalHeaderTitle">✏️ Edit Product Details</h3>
+      <button class="modal-close" onclick="closeEditProductModal()">&times;</button>
+    </div>
+    <form id="editProductForm" method="POST">
+      <input type="hidden" name="redirect_to" value="/inventory">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="edit_code">Product Code / SKU *</label>
+            <input type="text" id="edit_code" name="code" class="form-control" required placeholder="e.g. 001">
+          </div>
+          <div class="form-group">
+            <label for="edit_name">Product Name *</label>
+            <input type="text" id="edit_name" name="name" class="form-control" required placeholder="e.g. Polymer Plate">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="edit_category_id">Brand / Category</label>
+            <select id="edit_category_id" name="category_id" class="form-control">
+              <option value="">No Brand (Unbranded)</option>
+              <% if (typeof categories !== 'undefined') { %>
+                <% categories.forEach(cat => { %>
+                  <option value="<%= cat.id %>"><%= cat.name %></option>
+                <% }) %>
+              <% } %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit_unit">Unit of Measure</label>
+            <select id="edit_unit" name="unit" class="form-control">
+              <% ['pcs', 'ltr', 'kg', 'roll', 'box', 'set'].forEach(u => { %>
+                <option value="<%= u %>"><%= u %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="edit_unit_price">Selling Price (₹) *</label>
+            <input type="number" id="edit_unit_price" name="unit_price" class="form-control" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_cost_price">Cost Price (₹) *</label>
+            <input type="number" id="edit_cost_price" name="cost_price" class="form-control" step="0.01" required>
+          </div>
+        </div>
+
+        <!-- Branch Stocks Block -->
+        <div class="form-group" style="background:#f8fafc; padding:14px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:14px;">
+          <label style="color:#0284c7 !important; font-size:14px; font-weight:700; margin-bottom:8px;">Branch Stocks (Individual Branch Stock)</label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+            <% if (typeof branches !== 'undefined') { %>
+              <% branches.forEach(b => { %>
+                <div style="flex:1; min-width:120px;">
+                  <label style="font-size:12px; color:#475569 !important;"><%= b %> Stock</label>
+                  <input type="number" name="branch_<%= b %>" id="edit_branch_<%= b %>" class="form-control edit-branch-input" value="0" style="height:38px;">
+                </div>
+              <% }) %>
+            <% } %>
+            <div style="flex:1; min-width:120px;">
+              <label style="font-size:12px; color:#0f172a !important; font-weight:700;">Total Stock (Sum)</label>
+              <input type="number" id="edit_total_stock_display" class="form-control" value="0" disabled style="background:#e2e8f0 !important; font-weight:700; color:#0f172a !important; height:38px;">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="edit_reorder_level">Reorder (Low Stock) Level</label>
+            <input type="number" id="edit_reorder_level" name="reorder_level" class="form-control" value="10">
+          </div>
+          <div class="form-group">
+            <label for="edit_hsn_code">HSN Code</label>
+            <input type="text" id="edit_hsn_code" name="hsn_code" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="edit_gst_rate">GST Rate (%)</label>
+            <select id="edit_gst_rate" name="gst_rate" class="form-control">
+              <% [0, 5, 12, 18, 28].forEach(r => { %>
+                <option value="<%= r %>"><%= r %>%</option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_description">Description</label>
+          <textarea id="edit_description" name="description" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #e2e8f0; padding-top:15px;">
+        <button type="button" class="btn btn-secondary" onclick="closeEditProductModal()" style="padding:8px 18px; color:#000;">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="padding:8px 22px; font-weight:700; border-radius:6px; cursor:pointer;">Save Product Changes 💾</button>
       </div>
     </form>
   </div>
@@ -227,12 +416,14 @@
 
 <!-- Modal Control Scripts -->
 <script>
-const modal = document.getElementById('restockModal');
+// Quick Restock elements
+const restockModal = document.getElementById('restockModal');
 const modalProductTitle = document.getElementById('modalProductTitle');
 const modalProductId = document.getElementById('modalProductId');
 const modalProductCode = document.getElementById('modalProductCode');
 const modalCurrentStock = document.getElementById('modalCurrentStock');
 const modalProductName = document.getElementById('modalProductName');
+const modalBranch = document.getElementById('modalBranch');
 const modalQuantity = document.getElementById('modalQuantity');
 const modalType = document.getElementById('modalType');
 const modalNotes = document.getElementById('modalNotes');
@@ -241,9 +432,9 @@ const modalSubmitBtn = document.getElementById('modalSubmitBtn');
 
 let activeRowStockCell = null;
 let activeRowBadgeCell = null;
-let activeRowId = null;
+let activeRowElement = null;
 
-// Open modal function
+// Open Restock Modal
 function openRestockModal(id, name, code, currentStock, btnElement) {
   modalProductId.value = id;
   modalProductName.textContent = name;
@@ -253,35 +444,26 @@ function openRestockModal(id, name, code, currentStock, btnElement) {
   modalNotes.value = 'Quick restock';
   modalType.value = 'purchase';
   
-  // Keep track of the table cells we need to update
   const row = btnElement.closest('tr');
-  activeRowId = id;
+  activeRowElement = row;
   activeRowStockCell = row.querySelector('.stock-qty-value');
   activeRowBadgeCell = row.querySelector('.status-cell-wrapper');
   
-  modal.style.display = 'flex';
+  restockModal.style.display = 'flex';
   setTimeout(() => {
-    modal.querySelector('.modal-card').classList.add('show');
+    restockModal.querySelector('.modal-card').classList.add('show');
     modalQuantity.focus();
   }, 50);
 }
 
-// Close modal function
-function closeModal() {
-  modal.querySelector('.modal-card').classList.remove('show');
+function closeRestockModal() {
+  restockModal.querySelector('.modal-card').classList.remove('show');
   setTimeout(() => {
-    modal.style.display = 'none';
+    restockModal.style.display = 'none';
   }, 200);
 }
 
-// Close on background click
-window.addEventListener('click', (e) => {
-  if (e.target === modal) {
-    closeModal();
-  }
-});
-
-// Submit handler
+// Quick Restock Submit handler
 quickRestockForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   
@@ -289,6 +471,7 @@ quickRestockForm.addEventListener('submit', async (e) => {
   const quantity = parseInt(modalQuantity.value);
   const type = modalType.value;
   const notes = modalNotes.value;
+  const branch = modalBranch ? modalBranch.value : '';
   
   if (!quantity || quantity <= 0) return;
   
@@ -301,28 +484,34 @@ quickRestockForm.addEventListener('submit', async (e) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ type, quantity, notes })
+      body: JSON.stringify({ type, quantity, notes, branch })
     });
     
     const result = await response.json();
     if (result.success) {
-      // Update cell values dynamically!
+      // Update total stock cell
       if (activeRowStockCell) {
-        activeRowStockCell.textContent = result.newStock;
+        activeRowStockCell.textContent = result.newStockTotal !== undefined ? result.newStockTotal : result.newStock;
+      }
+      
+      // Update specific branch stock cell if present
+      if (activeRowElement && branch && result.newBranchStocks) {
+        const branchCell = activeRowElement.querySelector(`.branch-stock-cell[data-branch="${branch}"] span`);
+        if (branchCell && result.newBranchStocks[branch] !== undefined) {
+          branchCell.textContent = result.newBranchStocks[branch];
+        }
       }
       
       // Update badge/status cell dynamically
       if (activeRowBadgeCell) {
         const row = activeRowStockCell.closest('tr');
-        const reorderLevel = parseInt(row.cells[4].textContent);
+        const reorderLevel = parseInt(row.cells[row.cells.length - 3].textContent) || 10;
+        const totalStock = result.newStockTotal !== undefined ? result.newStockTotal : result.newStock;
         
         let badgeHtml = '';
-        if (result.newStock <= 0) {
-          badgeHtml = `
-            <span class="badge badge-danger">Out of Stock</span>
-            <button class="btn btn-danger btn-sm restock-badge-btn" onclick="openRestockModal('${id}', '${modalProductName.textContent.replace(/'/g, "\\'")}', '${modalProductCode.textContent}', ${result.newStock}, this)" style="padding: 2px 6px; font-size: 10px; font-weight:700; width:100%; border:none; background:#ef4444; margin-top:4px; display:block; text-align:center; border-radius:4px; cursor:pointer;">RESTOCK ➕</button>
-          `;
-        } else if (result.newStock <= reorderLevel) {
+        if (totalStock <= 0) {
+          badgeHtml = '<span class="badge badge-danger">Out of Stock</span>';
+        } else if (totalStock <= reorderLevel) {
           badgeHtml = '<span class="badge badge-warning">Low Stock</span>';
         } else {
           badgeHtml = '<span class="badge badge-success">In Stock</span>';
@@ -330,9 +519,8 @@ quickRestockForm.addEventListener('submit', async (e) => {
         activeRowBadgeCell.innerHTML = badgeHtml;
       }
       
-      // Show mini floating alert/notification
-      showToast('Stock updated successfully!');
-      closeModal();
+      showToast(`Stock updated successfully for ${branch || 'Total'}!`);
+      closeRestockModal();
     } else {
       alert('Error: ' + result.error);
     }
@@ -341,23 +529,86 @@ quickRestockForm.addEventListener('submit', async (e) => {
     alert('Failed to connect to the server.');
   } finally {
     modalSubmitBtn.disabled = false;
-    modalSubmitBtn.textContent = 'Update Stock';
+    modalSubmitBtn.textContent = 'Update Stock 💾';
   }
 });
 
-// Simple floating notification (toast)
+// Edit Product Modal elements
+const editProductModal = document.getElementById('editProductModal');
+const editProductForm = document.getElementById('editProductForm');
+const editModalHeaderTitle = document.getElementById('editModalHeaderTitle');
+
+function updateEditTotalStock() {
+  let total = 0;
+  document.querySelectorAll('.edit-branch-input').forEach(inp => {
+    total += parseInt(inp.value) || 0;
+  });
+  document.getElementById('edit_total_stock_display').value = total;
+}
+
+document.querySelectorAll('.edit-branch-input').forEach(inp => {
+  inp.addEventListener('input', updateEditTotalStock);
+});
+
+function openEditProductModal(prod) {
+  editProductForm.action = '/products/edit/' + prod.id;
+  editModalHeaderTitle.textContent = `✏️ Edit: ${prod.name} (${prod.code})`;
+  
+  document.getElementById('edit_code').value = prod.code || '';
+  document.getElementById('edit_name').value = prod.name || '';
+  document.getElementById('edit_category_id').value = prod.category_id || '';
+  document.getElementById('edit_unit').value = prod.unit || 'pcs';
+  document.getElementById('edit_unit_price').value = prod.unit_price || 0;
+  document.getElementById('edit_cost_price').value = prod.cost_price || 0;
+  document.getElementById('edit_reorder_level').value = prod.reorder_level || 10;
+  document.getElementById('edit_hsn_code').value = prod.hsn_code || '';
+  document.getElementById('edit_gst_rate').value = (prod.gst_rate !== undefined) ? prod.gst_rate : 18;
+  document.getElementById('edit_description').value = prod.description || '';
+  
+  // Fill branch stocks
+  <% if (typeof branches !== 'undefined') { %>
+    <% branches.forEach(b => { %>
+      const branchInput_<%= b %> = document.getElementById('edit_branch_<%= b %>');
+      if (branchInput_<%= b %>) {
+        branchInput_<%= b %>.value = (prod.branch_stocks && prod.branch_stocks['<%= b %>'] !== undefined) ? prod.branch_stocks['<%= b %>'] : 0;
+      }
+    <% }) %>
+  <% } %>
+  
+  updateEditTotalStock();
+  
+  editProductModal.style.display = 'flex';
+  setTimeout(() => {
+    editProductModal.querySelector('.modal-card').classList.add('show');
+  }, 50);
+}
+
+function closeEditProductModal() {
+  editProductModal.querySelector('.modal-card').classList.remove('show');
+  setTimeout(() => {
+    editProductModal.style.display = 'none';
+  }, 200);
+}
+
+// Background click close
+window.addEventListener('click', (e) => {
+  if (e.target === restockModal) closeRestockModal();
+  if (e.target === editProductModal) closeEditProductModal();
+});
+
+// Toast notification
 function showToast(message) {
   const toast = document.createElement('div');
   toast.style.position = 'fixed';
-  toast.style.bottom = '20px';
-  toast.style.right = '20px';
-  toast.style.background = 'var(--success)';
-  toast.style.color = '#fff';
+  toast.style.bottom = '24px';
+  toast.style.right = '24px';
+  toast.style.background = '#10b981';
+  toast.style.color = '#ffffff';
   toast.style.padding = '12px 24px';
   toast.style.borderRadius = '8px';
-  toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+  toast.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.3)';
   toast.style.zIndex = '3000';
-  toast.style.fontWeight = 'bold';
+  toast.style.fontWeight = '700';
   toast.style.transition = 'all 0.3s ease';
   toast.style.opacity = '0';
   toast.style.transform = 'translateY(10px)';
@@ -365,19 +616,15 @@ function showToast(message) {
   document.body.appendChild(toast);
   toast.textContent = message;
   
-  // Animate in
   setTimeout(() => {
     toast.style.opacity = '1';
     toast.style.transform = 'translateY(0)';
   }, 50);
   
-  // Remove after 3 seconds
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(10px)';
-    setTimeout(() => {
-      toast.remove();
-    }, 300);
+    setTimeout(() => { toast.remove(); }, 300);
   }, 3000);
 }
 </script>
