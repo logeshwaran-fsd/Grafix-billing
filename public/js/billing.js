@@ -62,8 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (products.length > 0) {
         prodDropdown.innerHTML = products.map(p => {
           let stocksText = '';
-          if (p.branch_stocks) {
-            stocksText = Object.entries(p.branch_stocks).map(([b, s]) => `${b} (${s})`).join(' | ');
+          if (p.branch_stocks && typeof p.branch_stocks === 'object') {
+            stocksText = Object.entries(p.branch_stocks)
+              .filter(([b]) => !['Parrys', 'Ambattur', 'parris', 'ambatur'].includes(b))
+              .map(([b, s]) => `${b} (${s})`)
+              .join(' | ');
           }
           return `
           <div class="dropdown-item" onclick="addItem(${JSON.stringify(p).replace(/"/g, '&quot;')})">

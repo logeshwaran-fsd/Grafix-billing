@@ -97,6 +97,7 @@ async function initialize() {
       await database.query("UPDATE invoices SET branch = '01-Parrys' WHERE branch = 'Parrys' OR branch = 'parris'");
       await database.query("UPDATE invoices SET branch = '02-Ambattur' WHERE branch = 'Ambattur' OR branch = 'ambatur'");
       await database.query("DELETE FROM branches WHERE name IN ('Parrys', 'Ambattur', 'parris', 'ambatur')");
+      await database.query("UPDATE products SET branch_stocks = (branch_stocks - 'Parrys' - 'Ambattur' - 'parris' - 'ambatur') WHERE branch_stocks IS NOT NULL");
     } catch (err) {}
 
   } catch (err) {
