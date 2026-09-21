@@ -237,6 +237,8 @@ function selectCustomer(custOrId, nameFallback, balanceFallback = 0) {
     card.style.display = 'block';
   } else if (card) {
     card.style.display = 'none';
+  }
+
   // Populate Outstanding Dues & Wallet Sections
   const outstandingSection = document.getElementById('outstanding-section');
   const outstandingBalanceDisplay = document.getElementById('outstanding-balance-display');
