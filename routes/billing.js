@@ -162,7 +162,8 @@ router.post('/create', async (req, res) => {
         }
         const isEstimate = (type === 'estimate');
         const itemTaxRate = isEstimate ? 0 : parseFloat(item.tax_rate || 0);
-        const lineSubtotal = item.quantity * prod.unit_price;
+        const actualUnitPrice = (item.unit_price !== undefined && !isNaN(parseFloat(item.unit_price))) ? parseFloat(item.unit_price) : prod.unit_price;
+        const lineSubtotal = item.quantity * actualUnitPrice;
         const lineDisc = parseFloat(item.discount) || 0;
         const lineTax = isEstimate ? 0 : (lineSubtotal - lineDisc) * (itemTaxRate / 100);
         subtotal += lineSubtotal;
@@ -174,7 +175,7 @@ router.post('/create', async (req, res) => {
           product_name: prod.name,
           product_code: prod.code,
           quantity: item.quantity,
-          unit_price: prod.unit_price,
+          unit_price: actualUnitPrice,
           discount: lineDisc,
           tax_rate: itemTaxRate,
           tax_amount: lineTax,
