@@ -237,22 +237,44 @@ function selectCustomer(custOrId, nameFallback, balanceFallback = 0) {
     card.style.display = 'block';
   } else if (card) {
     card.style.display = 'none';
-  }
-  
+  // Populate Outstanding Dues & Wallet Sections
+  const outstandingSection = document.getElementById('outstanding-section');
+  const outstandingBalanceDisplay = document.getElementById('outstanding-balance-display');
+  const includeOutstandingCheckbox = document.getElementById('include-outstanding');
+  const customerOutstandingBalance = document.getElementById('customer-outstanding-balance');
+
   const walletSection = document.getElementById('wallet-section');
   const walletBalanceDisplay = document.getElementById('wallet-balance-display');
   const applyWalletCheckbox = document.getElementById('apply-wallet');
   const customerWalletBalance = document.getElementById('customer-wallet-balance');
   
-  // Balance is negative if the customer has an advance (wallet)
   const balance = parseFloat(cust.balance) || 0;
-  if (balance < 0) {
+  if (balance > 0) {
+    // Customer has pending outstanding debt
+    if (outstandingSection) outstandingSection.style.display = 'block';
+    if (outstandingBalanceDisplay) outstandingBalanceDisplay.textContent = '₹' + balance.toFixed(2);
+    if (customerOutstandingBalance) customerOutstandingBalance.value = balance;
+    if (includeOutstandingCheckbox) includeOutstandingCheckbox.checked = true;
+
+    if (walletSection) walletSection.style.display = 'none';
+    if (customerWalletBalance) customerWalletBalance.value = 0;
+    if (applyWalletCheckbox) applyWalletCheckbox.checked = false;
+  } else if (balance < 0) {
+    // Customer has overpaid advance (wallet)
     const advance = Math.abs(balance);
     if (walletSection) walletSection.style.display = 'block';
     if (walletBalanceDisplay) walletBalanceDisplay.textContent = '₹' + advance.toFixed(2);
     if (customerWalletBalance) customerWalletBalance.value = advance;
-    if (applyWalletCheckbox) applyWalletCheckbox.checked = false;
+    if (applyWalletCheckbox) applyWalletCheckbox.checked = true;
+
+    if (outstandingSection) outstandingSection.style.display = 'none';
+    if (customerOutstandingBalance) customerOutstandingBalance.value = 0;
+    if (includeOutstandingCheckbox) includeOutstandingCheckbox.checked = false;
   } else {
+    if (outstandingSection) outstandingSection.style.display = 'none';
+    if (customerOutstandingBalance) customerOutstandingBalance.value = 0;
+    if (includeOutstandingCheckbox) includeOutstandingCheckbox.checked = false;
+
     if (walletSection) walletSection.style.display = 'none';
     if (customerWalletBalance) customerWalletBalance.value = 0;
     if (applyWalletCheckbox) applyWalletCheckbox.checked = false;
@@ -268,10 +290,17 @@ function clearSelectedCustomer() {
   document.getElementById('customer-search').value = '';
   const card = document.getElementById('selected-customer-card');
   if (card) card.style.display = 'none';
+
+  const outstandingSection = document.getElementById('outstanding-section');
+  if (outstandingSection) outstandingSection.style.display = 'none';
+  const customerOutstandingBalance = document.getElementById('customer-outstanding-balance');
+  if (customerOutstandingBalance) customerOutstandingBalance.value = 0;
+
   const walletSection = document.getElementById('wallet-section');
   if (walletSection) walletSection.style.display = 'none';
   const customerWalletBalance = document.getElementById('customer-wallet-balance');
   if (customerWalletBalance) customerWalletBalance.value = 0;
+
   calculateTotals();
   document.getElementById('customer-search').focus();
 }
@@ -488,30 +517,50 @@ function calculateTotals() {
     tax += (lineTotal - item.discount) * (item.tax_rate / 100);
   });
 
-  const grandTotal = subtotal - discount + tax + courier;
-  let netPayable = grandTotal;
+  const currentBillGrandTotal = subtotal - discount + tax + courier;
+  let netPayable = currentBillGrandTotal;
   
+  // Outstanding Dues addition
+  const includeOutstanding = document.getElementById('include-outstanding');
+  const outstandingAdditionRow = document.getElementById('outstanding-addition-row');
+  const outstandingAdditionDisplay = document.getElementById('outstanding-addition-display');
+  const customerOutstandingBalance = parseFloat(document.getElementById('customer-outstanding-balance')?.value) || 0;
+
+  let outstandingAddedAmount = 0;
+  if (includeOutstanding && includeOutstanding.checked && customerOutstandingBalance > 0) {
+    outstandingAddedAmount = customerOutstandingBalance;
+    netPayable += outstandingAddedAmount;
+    if (outstandingAdditionRow) {
+      outstandingAdditionRow.style.setProperty('display', 'flex', 'important');
+      outstandingAdditionDisplay.textContent = '+ ₹' + outstandingAddedAmount.toLocaleString('en-IN', {minimumFractionDigits: 2});
+    }
+  } else if (outstandingAdditionRow) {
+    outstandingAdditionRow.style.setProperty('display', 'none', 'important');
+  }
+
+  // Wallet / Advance deduction
   const applyWallet = document.getElementById('apply-wallet');
   const walletDeductionRow = document.getElementById('wallet-deduction-row');
   const walletDeductionDisplay = document.getElementById('wallet-deduction-display');
-  const customerWalletBalance = parseFloat(document.getElementById('customer-wallet-balance').value) || 0;
+  const customerWalletBalance = parseFloat(document.getElementById('customer-wallet-balance')?.value) || 0;
   
   let walletAppliedAmount = 0;
   if (applyWallet && applyWallet.checked && customerWalletBalance > 0) {
-    walletAppliedAmount = Math.min(grandTotal, customerWalletBalance);
-    netPayable = grandTotal - walletAppliedAmount;
-    walletDeductionRow.style.setProperty('display', 'flex', 'important');
-    walletDeductionDisplay.textContent = '- ₹' + walletAppliedAmount.toLocaleString('en-IN', {minimumFractionDigits: 2});
+    walletAppliedAmount = Math.min(netPayable, customerWalletBalance);
+    netPayable = Math.max(0, netPayable - walletAppliedAmount);
+    if (walletDeductionRow) {
+      walletDeductionRow.style.setProperty('display', 'flex', 'important');
+      walletDeductionDisplay.textContent = '- ₹' + walletAppliedAmount.toLocaleString('en-IN', {minimumFractionDigits: 2});
+    }
   } else if (walletDeductionRow) {
     walletDeductionRow.style.setProperty('display', 'none', 'important');
-    walletAppliedAmount = 0;
   }
 
   document.getElementById('subtotal-display').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
   document.getElementById('discount-display').textContent = '₹' + discount.toLocaleString('en-IN', {minimumFractionDigits: 2});
   const cdEl = document.getElementById('courier-display');
   if (cdEl) cdEl.textContent = '₹' + courier.toLocaleString('en-IN', {minimumFractionDigits: 2});
-  document.getElementById('grandtotal-display').textContent = '₹' + grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+  document.getElementById('grandtotal-display').textContent = '₹' + currentBillGrandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
   
   const netPayableDisplay = document.getElementById('netpayable-display');
   if(netPayableDisplay) {
@@ -577,7 +626,10 @@ async function submitInvoice() {
     invoice_type: document.getElementById('invoice-type').value,
     branch: document.getElementById('branch-select').value,
     amount_paid: parseFloat(document.getElementById('amount-paid').value) || 0,
+    include_outstanding: document.getElementById('include-outstanding') ? document.getElementById('include-outstanding').checked : false,
+    outstanding_amount: parseFloat(document.getElementById('customer-outstanding-balance')?.value) || 0,
     apply_wallet: document.getElementById('apply-wallet') ? document.getElementById('apply-wallet').checked : false,
+    wallet_amount: parseFloat(document.getElementById('customer-wallet-balance')?.value) || 0,
     items: invoiceItems
   };
   if (dateInputEl && dateInputEl.value) {

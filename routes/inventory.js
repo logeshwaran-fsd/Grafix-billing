@@ -4,20 +4,40 @@ const { getDb } = require('../database/db');
 
 router.get('/', async (req, res) => {
   const search = req.query.search || '';
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
+  const offset = (page - 1) * limit;
+
   try {
     const db = getDb();
     const branchesRes = await db.query('SELECT name FROM branches ORDER BY name ASC');
     const branches = branchesRes.rows.map(b => b.name);
 
-    let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1';
+    let whereClause = 'WHERE p.is_active = 1';
     const params = [];
     let paramIndex = 1;
 
     if (search) {
-      query += ` AND (p.name ILIKE $${paramIndex++} OR p.code ILIKE $${paramIndex++})`;
+      whereClause += ` AND (p.name ILIKE $${paramIndex++} OR p.code ILIKE $${paramIndex++})`;
       params.push(`%${search}%`, `%${search}%`);
     }
-    query += " ORDER BY CASE WHEN p.code ~ '^[0-9]+$' THEN LPAD(p.code, 10, '0') ELSE p.code END ASC";
+
+    const countRes = await db.query(`SELECT COUNT(*) as count FROM products p ${whereClause}`, params);
+    const totalCount = parseInt(countRes.rows[0].count, 10);
+    const totalPages = Math.ceil(totalCount / limit) || 1;
+
+    const limitIdx = paramIndex++;
+    const offsetIdx = paramIndex++;
+    params.push(limit, offset);
+
+    const query = `
+      SELECT p.*, c.name as category_name 
+      FROM products p 
+      LEFT JOIN categories c ON p.category_id = c.id 
+      ${whereClause} 
+      ORDER BY CASE WHEN p.code ~ '^[0-9]+$' THEN LPAD(p.code, 10, '0') ELSE p.code END ASC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `;
     const productsRes = await db.query(query, params);
     const products = productsRes.rows;
 
@@ -33,7 +53,16 @@ router.get('/', async (req, res) => {
     const categoriesRes = await db.query('SELECT * FROM categories ORDER BY name ASC');
     const categories = categoriesRes.rows;
 
-    res.render('inventory/stock', { pageTitle: 'Stock Overview', activePage: 'inventory', products, stats, search, branches, categories });
+    res.render('inventory/stock', { 
+      pageTitle: 'Stock Overview', 
+      activePage: 'inventory', 
+      products, 
+      stats, 
+      search, 
+      branches, 
+      categories,
+      pagination: { page, totalPages, totalCount }
+    });
   } catch (err) {
     console.error('Error loading inventory stock page:', err);
     res.status(500).render('error', { pageTitle: 'Error', message: 'Failed to load stock data: ' + err.message, activePage: 'inventory' });

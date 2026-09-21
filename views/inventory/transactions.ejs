@@ -88,22 +88,35 @@
         </table>
       </div>
 
-      <!-- Pagination -->
+      <!-- Pagination with Go To Page -->
       <% if (pagination.totalPages > 1) { %>
-        <div class="d-flex justify-between align-center p-3" style="border-top:1px solid var(--border); margin-top:10px;">
+        <div class="d-flex justify-between align-center p-3" style="border-top:1px solid var(--border); margin-top:10px; flex-wrap:wrap; gap:12px;">
           <div class="text-secondary" style="font-size:13px;">
             Showing Page <%= pagination.page %> of <%= pagination.totalPages %> (<%= pagination.totalCount %> records)
           </div>
-          <div class="d-flex gap-1">
-            <% if (pagination.page > 1) { %>
-              <a href="/inventory/transactions?page=<%= pagination.page - 1 %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>" class="btn btn-secondary btn-sm">Previous</a>
-            <% } %>
-            <% for (let p = Math.max(1, pagination.page - 2); p <= Math.min(pagination.totalPages, pagination.page + 2); p++) { %>
-              <a href="/inventory/transactions?page=<%= p %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>" class="btn <%= p === pagination.page ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= p %></a>
-            <% } %>
-            <% if (pagination.page < pagination.totalPages) { %>
-              <a href="/inventory/transactions?page=<%= pagination.page + 1 %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>" class="btn btn-secondary btn-sm">Next</a>
-            <% } %>
+          <div class="d-flex gap-2 align-center" style="flex-wrap:wrap;">
+            <div class="d-flex gap-1">
+              <% if (pagination.page > 1) { %>
+                <a href="/inventory/transactions?page=1&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>" class="btn btn-secondary btn-sm" title="First Page">« First</a>
+                <a href="/inventory/transactions?page=<%= pagination.page - 1 %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>" class="btn btn-secondary btn-sm">‹ Prev</a>
+              <% } %>
+              <% for (let p = Math.max(1, pagination.page - 2); p <= Math.min(pagination.totalPages, pagination.page + 2); p++) { %>
+                <a href="/inventory/transactions?page=<%= p %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>" class="btn <%= p === pagination.page ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= p %></a>
+              <% } %>
+              <% if (pagination.page < pagination.totalPages) { %>
+                <a href="/inventory/transactions?page=<%= pagination.page + 1 %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>" class="btn btn-secondary btn-sm">Next ›</a>
+                <a href="/inventory/transactions?page=<%= pagination.totalPages %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>" class="btn btn-secondary btn-sm" title="Last Page">Last »</a>
+              <% } %>
+            </div>
+
+            <!-- Go to Page Jump -->
+            <form method="GET" action="/inventory/transactions" style="display:inline-flex; align-items:center; gap:6px; margin:0;">
+              <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
+              <% if (selectedType) { %><input type="hidden" name="type" value="<%= selectedType %>"><% } %>
+              <span style="font-size:12px; color:var(--text-secondary); font-weight:600;">Go to:</span>
+              <input type="number" name="page" min="1" max="<%= pagination.totalPages %>" value="<%= pagination.page %>" placeholder="#" style="width:65px; height:32px; padding:2px 8px; font-size:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); text-align:center;">
+              <button type="submit" class="btn btn-secondary btn-sm" style="padding:4px 10px; font-size:12px; font-weight:600;">Go</button>
+            </form>
           </div>
         </div>
       <% } %>

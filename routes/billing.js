@@ -186,16 +186,20 @@ router.post('/create', async (req, res) => {
       
       let net_payable = total_amount;
       let applied_wallet = 0;
+      let added_outstanding = 0;
 
-      if (customer_id && apply_wallet) {
+      if (customer_id) {
         const custRes = await client.query('SELECT balance FROM customers WHERE id = $1', [customer_id]);
         const cust = custRes.rows[0];
-        if (cust && cust.balance < 0) {
-          const advance = Math.abs(cust.balance);
+        const prev_balance = cust ? (parseFloat(cust.balance) || 0) : 0;
+
+        if (prev_balance > 0 && req.body.include_outstanding) {
+          added_outstanding = prev_balance;
+          net_payable = total_amount + added_outstanding;
+        } else if (prev_balance < 0 && req.body.apply_wallet) {
+          const advance = Math.abs(prev_balance);
           applied_wallet = Math.min(total_amount, advance);
-          net_payable = total_amount - applied_wallet;
-          
-          await client.query('UPDATE customers SET balance = balance + $1 WHERE id = $2', [applied_wallet, customer_id]);
+          net_payable = Math.max(0, total_amount - applied_wallet);
         }
       }
       
@@ -242,13 +246,11 @@ router.post('/create', async (req, res) => {
       }
 
       if (customer_id) {
-        if (final_amount_paid > net_payable) {
-          const excess = final_amount_paid - net_payable;
-          await client.query('UPDATE customers SET balance = balance - $1 WHERE id = $2', [excess, customer_id]);
-        } else if (final_amount_paid < net_payable) {
-          const deficit = net_payable - final_amount_paid;
-          await client.query('UPDATE customers SET balance = balance + $1 WHERE id = $2', [deficit, customer_id]);
-        }
+        const custRes = await client.query('SELECT balance FROM customers WHERE id = $1', [customer_id]);
+        const cust = custRes.rows[0];
+        const prev_balance = cust ? (parseFloat(cust.balance) || 0) : 0;
+        const new_balance = prev_balance + total_amount - final_amount_paid;
+        await client.query('UPDATE customers SET balance = $1 WHERE id = $2', [new_balance, customer_id]);
       }
 
       return newInvoiceId;
@@ -481,13 +483,8 @@ router.post('/:id/edit', async (req, res) => {
       }
       
       if (customer_id) {
-        if (final_amount_paid > net_payable) {
-          const excess = final_amount_paid - net_payable;
-          await client.query('UPDATE customers SET balance = balance - $1 WHERE id = $2', [excess, customer_id]);
-        } else if (final_amount_paid < net_payable) {
-          const deficit = net_payable - final_amount_paid;
-          await client.query('UPDATE customers SET balance = balance + $1 WHERE id = $2', [deficit, customer_id]);
-        }
+        const new_diff = total_amount - final_amount_paid;
+        await client.query('UPDATE customers SET balance = balance + $1 WHERE id = $2', [new_diff, customer_id]);
       }
 
     });

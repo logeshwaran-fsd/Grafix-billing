@@ -184,7 +184,7 @@
           </div>
           <% if (invoice.courier_charges > 0) { %>
             <div style="display:flex; justify-content:space-between; margin-bottom:8px; <%= isEst ? 'border-bottom:1px solid #e2e8f0; padding-bottom:8px;' : '' %>">
-              <span>Courier Charges:</span>
+              <span>Delivery Charges:</span>
               <span>₹<%= parseFloat(invoice.courier_charges).toFixed(2) %></span>
             </div>
           <% } %>
@@ -252,7 +252,11 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('print') === 'true') {
+    if (urlParams.get('download') === 'true') {
+      setTimeout(() => {
+        downloadPDF();
+      }, 400);
+    } else if (urlParams.get('print') === 'true') {
       // Small timeout to ensure fonts/images are loaded before opening print dialog
       setTimeout(() => {
         window.print();

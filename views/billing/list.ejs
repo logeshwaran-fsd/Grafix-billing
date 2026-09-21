@@ -66,7 +66,7 @@
                 <td class="no-print" style="white-space: nowrap; text-align: right;">
                   <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
                     <a href="/billing/<%= inv.id %>" class="btn btn-secondary btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;">View</a>
-                    <a href="/billing/<%= inv.id %>?download=true" class="btn btn-success btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;" title="Download PDF">PDF</a>
+                    <a href="/billing/<%= inv.id %>?download=true" class="btn btn-success btn-sm" style="padding: 5px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center;" title="Download Invoice">Download</a>
                   </div>
                 </td>
               </tr>
@@ -76,25 +76,43 @@
       </div>
 
       <% if (pagination.totalPages > 1) { %>
-        <div class="pagination">
-          <% 
-            let startPage = Math.max(1, pagination.page - 2);
-            let endPage = Math.min(pagination.totalPages, startPage + 4);
-            startPage = Math.max(1, endPage - 4);
-          %>
-          <% if (startPage > 1) { %>
-            <a href="/billing?page=1&search=<%= search %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>">1</a>
-            <% if (startPage > 2) { %><span>...</span><% } %>
-          <% } %>
-          
-          <% for(let i=startPage; i<=endPage; i++) { %>
-            <a href="/billing?page=<%= i %>&search=<%= search %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
-          <% } %>
-          
-          <% if (endPage < pagination.totalPages) { %>
-            <% if (endPage < pagination.totalPages - 1) { %><span>...</span><% } %>
-            <a href="/billing?page=<%= pagination.totalPages %>&search=<%= search %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>"><%= pagination.totalPages %></a>
-          <% } %>
+        <div class="d-flex justify-between align-center p-3" style="border-top:1px solid var(--border); margin-top:10px; flex-wrap:wrap; gap:12px;">
+          <div class="text-secondary" style="font-size:13px;">
+            Showing Page <%= pagination.page %> of <%= pagination.totalPages %> (<%= pagination.totalInvoices || '' %> <%= pagination.totalInvoices ? 'invoices' : '' %>)
+          </div>
+          <div class="d-flex gap-2 align-center" style="flex-wrap:wrap;">
+            <div class="pagination" style="margin:0;">
+              <% 
+                let startPage = Math.max(1, pagination.page - 2);
+                let endPage = Math.min(pagination.totalPages, startPage + 4);
+                startPage = Math.max(1, endPage - 4);
+              %>
+              <% if (startPage > 1) { %>
+                <a href="/billing?page=1&search=<%= encodeURIComponent(search) %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>">1</a>
+                <% if (startPage > 2) { %><span>...</span><% } %>
+              <% } %>
+              
+              <% for(let i=startPage; i<=endPage; i++) { %>
+                <a href="/billing?page=<%= i %>&search=<%= encodeURIComponent(search) %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+              <% } %>
+              
+              <% if (endPage < pagination.totalPages) { %>
+                <% if (endPage < pagination.totalPages - 1) { %><span>...</span><% } %>
+                <a href="/billing?page=<%= pagination.totalPages %>&search=<%= encodeURIComponent(search) %>&status=<%= selectedStatus %>&from=<%= from %>&to=<%= to %>"><%= pagination.totalPages %></a>
+              <% } %>
+            </div>
+
+            <!-- Go to Page Jump -->
+            <form method="GET" action="/billing" style="display:inline-flex; align-items:center; gap:6px; margin:0;">
+              <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
+              <% if (selectedStatus) { %><input type="hidden" name="status" value="<%= selectedStatus %>"><% } %>
+              <% if (from) { %><input type="hidden" name="from" value="<%= from %>"><% } %>
+              <% if (to) { %><input type="hidden" name="to" value="<%= to %>"><% } %>
+              <span style="font-size:12px; color:var(--text-secondary); font-weight:600;">Go to:</span>
+              <input type="number" name="page" min="1" max="<%= pagination.totalPages %>" value="<%= pagination.page %>" placeholder="#" style="width:65px; height:32px; padding:2px 8px; font-size:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); text-align:center;">
+              <button type="submit" class="btn btn-secondary btn-sm" style="padding:4px 10px; font-size:12px; font-weight:600;">Go</button>
+            </form>
+          </div>
         </div>
       <% } %>
     </div>

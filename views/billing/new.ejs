@@ -113,11 +113,27 @@
             </div>
           </div>
 
-          <div id="wallet-section" style="display:none; background: var(--success-bg); padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--success);">
+          <!-- Outstanding Dues Section (When customer has pending balance > 0) -->
+          <div id="outstanding-section" style="display:none; background: rgba(239, 68, 68, 0.1); padding: 10px 14px; border-radius: 8px; margin-top: 10px; margin-bottom: 14px; border: 1px solid var(--danger);">
             <div class="d-flex justify-between align-items-center">
-              <span class="fw-bold" style="color: var(--success);">Wallet Advance: <span id="wallet-balance-display">₹0.00</span></span>
-              <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer; font-weight:600;">
-                <input type="checkbox" id="apply-wallet" onchange="calculateTotals()"> Apply
+              <div>
+                <span class="fw-bold text-danger" style="font-size:13px;">Previous Outstanding Dues: <span id="outstanding-balance-display">₹0.00</span></span>
+              </div>
+              <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer; font-weight:600; font-size:12px; color:var(--danger);">
+                <input type="checkbox" id="include-outstanding" checked onchange="calculateTotals()"> Auto-Add
+              </label>
+            </div>
+            <input type="hidden" id="customer-outstanding-balance" value="0">
+          </div>
+
+          <!-- Advance / Overpaid Wallet Section (When customer balance < 0) -->
+          <div id="wallet-section" style="display:none; background: var(--success-bg); padding: 10px 14px; border-radius: 8px; margin-top: 10px; margin-bottom: 14px; border: 1px solid var(--success);">
+            <div class="d-flex justify-between align-items-center">
+              <div>
+                <span class="fw-bold" style="color: var(--success); font-size:13px;">Overpaid Advance (Wallet): <span id="wallet-balance-display">₹0.00</span></span>
+              </div>
+              <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer; font-weight:600; font-size:12px; color:var(--success);">
+                <input type="checkbox" id="apply-wallet" checked onchange="calculateTotals()"> Auto-Minus
               </label>
             </div>
             <input type="hidden" id="customer-wallet-balance" value="0">
@@ -142,7 +158,7 @@
           </div>
 
           <div class="form-group">
-            <label for="courier-charges">Courier Charges (₹)</label>
+            <label for="courier-charges">Delivery Charges (₹)</label>
             <input type="number" id="courier-charges" class="form-control" value="<%= typeof cloneData !== 'undefined' && cloneData && cloneData.courier_charges ? cloneData.courier_charges : 0 %>" min="0" onchange="calculateTotals()">
           </div>
 
@@ -161,18 +177,22 @@
               <span id="discount-display">₹0.00</span>
             </div>
             <div class="d-flex justify-between fs-sm text-secondary mb-1">
-              <span>Courier Charges:</span>
+              <span>Delivery Charges:</span>
               <span id="courier-display">₹0.00</span>
             </div>
-            <div class="d-flex justify-between fw-bold fs-2xl mt-3" style="border-top:2px solid var(--border); padding-top:12px;">
-              <span>Grand Total:</span>
+            <div class="d-flex justify-between fw-bold fs-xl mt-2" style="border-top:1px solid var(--border); padding-top:8px;">
+              <span>Current Bill Total:</span>
               <span id="grandtotal-display">₹0.00</span>
             </div>
-            <div class="d-flex justify-between fw-bold fs-xl mt-2 text-danger" id="wallet-deduction-row" style="display:none !important;">
-              <span>Wallet Applied:</span>
+            <div class="d-flex justify-between fw-bold fs-sm mt-1 text-danger" id="outstanding-addition-row" style="display:none !important;">
+              <span>Previous Outstanding Dues:</span>
+              <span id="outstanding-addition-display">+ ₹0.00</span>
+            </div>
+            <div class="d-flex justify-between fw-bold fs-sm mt-1 text-success" id="wallet-deduction-row" style="display:none !important;">
+              <span>Advance / Overpaid Applied:</span>
               <span id="wallet-deduction-display">- ₹0.00</span>
             </div>
-            <div class="d-flex justify-between fw-bold fs-2xl text-accent mt-2">
+            <div class="d-flex justify-between fw-bold fs-2xl text-accent mt-2" style="border-top:2px solid var(--border); padding-top:10px;">
               <span>Net Payable:</span>
               <span id="netpayable-display">₹0.00</span>
             </div>

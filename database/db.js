@@ -91,9 +91,12 @@ async function initialize() {
       await database.query("ALTER TABLE customers ADD COLUMN phone_02 TEXT");
     } catch (err) {}
 
-    // Migration: Seed default branches Parrys and Ambattur
+    // Migration: Ensure only numbered branches exist (01-Parrys, 02-Ambattur) and purge unnumbered ones
     try {
-      await database.query("INSERT INTO branches (name) VALUES ('Parrys'), ('Ambattur') ON CONFLICT (name) DO NOTHING");
+      await database.query("INSERT INTO branches (name) VALUES ('01-Parrys'), ('02-Ambattur') ON CONFLICT (name) DO NOTHING");
+      await database.query("UPDATE invoices SET branch = '01-Parrys' WHERE branch = 'Parrys' OR branch = 'parris'");
+      await database.query("UPDATE invoices SET branch = '02-Ambattur' WHERE branch = 'Ambattur' OR branch = 'ambatur'");
+      await database.query("DELETE FROM branches WHERE name IN ('Parrys', 'Ambattur', 'parris', 'ambatur')");
     } catch (err) {}
 
   } catch (err) {
