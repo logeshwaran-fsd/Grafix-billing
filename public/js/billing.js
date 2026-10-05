@@ -770,8 +770,8 @@ function openQuickCustModal() {
   document.getElementById('quick-cust-name').value = currentSearch;
   document.getElementById('quick-cust-phone').value = '';
   document.getElementById('quick-cust-address').value = '';
-  document.getElementById('quick-cust-city').value = 'Chennai';
-  document.getElementById('quick-cust-state').value = 'Tamil Nadu';
+  document.getElementById('quick-cust-city').value = '';
+  document.getElementById('quick-cust-state').value = '';
   document.getElementById('quick-cust-pincode').value = '';
   document.getElementById('quick-cust-gstin').value = '';
   document.getElementById('quick-cust-email').value = '';
@@ -808,8 +808,8 @@ function openEditCustModal(cust) {
   document.getElementById('quick-cust-name').value = cust.name || '';
   document.getElementById('quick-cust-phone').value = cust.phone || '';
   document.getElementById('quick-cust-address').value = cust.address || '';
-  document.getElementById('quick-cust-city').value = cust.city || 'Chennai';
-  document.getElementById('quick-cust-state').value = cust.state || 'Tamil Nadu';
+  document.getElementById('quick-cust-city').value = cust.city || '';
+  document.getElementById('quick-cust-state').value = cust.state || '';
   document.getElementById('quick-cust-pincode').value = cust.pincode || '';
   document.getElementById('quick-cust-gstin').value = cust.gstin || '';
   document.getElementById('quick-cust-email').value = cust.email || '';
