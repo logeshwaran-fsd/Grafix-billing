@@ -1,4 +1,5 @@
 let invoiceItems = [];
+let currentCustomerObj = null;
 
 // Debounce for search
 function debounce(func, wait) {
@@ -119,13 +120,21 @@ document.addEventListener('DOMContentLoaded', () => {
         custDropdown.innerHTML = customers.map(c => {
           const addressParts = [c.address, c.city, c.pincode].filter(Boolean).join(', ');
           const gstinBadge = c.gstin ? `<span class="badge badge-default" style="font-size:10px; margin-left:6px; background:#334155; color:#fff;">GST: ${c.gstin}</span>` : '';
+          const custDataEscaped = JSON.stringify(c).replace(/"/g, '&quot;');
           return `
-          <div class="dropdown-item customer-search-item" onclick="selectCustomer(${JSON.stringify(c).replace(/"/g, '&quot;')})" style="padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; text-align:left; display:block;">
-            <div style="font-weight:700; color:var(--text-primary); font-size:14px; line-height:1.3;">
-              ${c.name} ${gstinBadge}
+          <div class="dropdown-item customer-search-item" onclick="selectCustomer(${custDataEscaped})" style="padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; color:var(--text-primary); font-size:14px; line-height:1.3;">
+                ${c.name} ${gstinBadge}
+              </div>
+              ${addressParts ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:3px; line-height:1.35; word-break:break-word;">${addressParts}</div>` : ''}
+              ${c.phone ? `<div style="font-size:12px; font-weight:700; color:var(--accent); margin-top:3px;">Phone: ${c.phone}</div>` : ''}
             </div>
-            ${addressParts ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:3px; line-height:1.35; word-break:break-word;">${addressParts}</div>` : ''}
-            ${c.phone ? `<div style="font-size:12px; font-weight:700; color:var(--accent); margin-top:3px;">Phone: ${c.phone}</div>` : ''}
+            <div style="flex-shrink:0;">
+              <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); openEditCustModal(${custDataEscaped})" style="padding:4px 9px; font-size:11px; font-weight:600; background:rgba(245,158,11,0.15); color:#d97706; border:1px solid #f59e0b; border-radius:4px; display:inline-flex; align-items:center; gap:3px;" title="Edit this customer details on the spot">
+                ✎ Edit
+              </button>
+            </div>
           </div>
         `}).join('');
         custDropdown.style.display = 'block';
@@ -210,6 +219,12 @@ function selectCustomer(custOrId, nameFallback, balanceFallback = 0) {
     };
   }
 
+  currentCustomerObj = cust;
+  const headerEditBtn = document.getElementById('header-edit-cust-btn');
+  if (headerEditBtn) {
+    headerEditBtn.style.display = (cust && cust.id) ? 'inline-block' : 'none';
+  }
+
   document.getElementById('customer-id').value = cust.id || '';
   document.getElementById('customer-search').value = cust.name || '';
   const custDropdown = document.getElementById('customer-dropdown');
@@ -291,6 +306,10 @@ function selectCustomer(custOrId, nameFallback, balanceFallback = 0) {
 }
 
 function clearSelectedCustomer() {
+  currentCustomerObj = null;
+  const headerEditBtn = document.getElementById('header-edit-cust-btn');
+  if (headerEditBtn) headerEditBtn.style.display = 'none';
+
   document.getElementById('customer-id').value = '';
   document.getElementById('customer-search').value = '';
   const card = document.getElementById('selected-customer-card');
@@ -740,6 +759,14 @@ async function submitQuickStock() {
 
 function openQuickCustModal() {
   const currentSearch = document.getElementById('customer-search').value.trim();
+  document.getElementById('quick-cust-id').value = '';
+  const modalTitle = document.getElementById('quick-cust-modal-title');
+  if (modalTitle) modalTitle.textContent = 'Add New Customer Details';
+  const submitBtn = document.getElementById('quick-cust-submit-btn');
+  if (submitBtn) submitBtn.textContent = 'Save & Select Customer';
+  const balGroup = document.getElementById('quick-cust-balance-group');
+  if (balGroup) balGroup.style.display = 'block';
+
   document.getElementById('quick-cust-name').value = currentSearch;
   document.getElementById('quick-cust-phone').value = '';
   document.getElementById('quick-cust-address').value = '';
@@ -758,12 +785,50 @@ function openQuickCustModal() {
   }
 }
 
+function openEditCustModal(cust) {
+  if (!cust) {
+    cust = currentCustomerObj;
+  }
+  if (!cust || !cust.id) {
+    return alert('Please select a customer first to edit!');
+  }
+  
+  // Close search dropdown if open
+  const custDropdown = document.getElementById('customer-dropdown');
+  if (custDropdown) custDropdown.style.display = 'none';
+
+  document.getElementById('quick-cust-id').value = cust.id;
+  const modalTitle = document.getElementById('quick-cust-modal-title');
+  if (modalTitle) modalTitle.textContent = `Edit Customer (${cust.name}) - Master List`;
+  const submitBtn = document.getElementById('quick-cust-submit-btn');
+  if (submitBtn) submitBtn.textContent = 'Update & Save to Master List';
+  const balGroup = document.getElementById('quick-cust-balance-group');
+  if (balGroup) balGroup.style.display = 'none';
+
+  document.getElementById('quick-cust-name').value = cust.name || '';
+  document.getElementById('quick-cust-phone').value = cust.phone || '';
+  document.getElementById('quick-cust-address').value = cust.address || '';
+  document.getElementById('quick-cust-city').value = cust.city || 'Chennai';
+  document.getElementById('quick-cust-state').value = cust.state || 'Tamil Nadu';
+  document.getElementById('quick-cust-pincode').value = cust.pincode || '';
+  document.getElementById('quick-cust-gstin').value = cust.gstin || '';
+  document.getElementById('quick-cust-email').value = cust.email || '';
+  
+  document.getElementById('quick-customer-modal').style.display = 'flex';
+  document.getElementById('quick-cust-name').focus();
+}
+
+function openEditCurrentCustModal() {
+  openEditCustModal(currentCustomerObj);
+}
+
 function closeQuickCustModal() {
   document.getElementById('quick-customer-modal').style.display = 'none';
   document.getElementById('customer-search').focus();
 }
 
 async function submitQuickCust() {
+  const custId = document.getElementById('quick-cust-id').value;
   const name = document.getElementById('quick-cust-name').value.trim();
   const phone = document.getElementById('quick-cust-phone').value.trim();
   const address = document.getElementById('quick-cust-address').value.trim();
@@ -775,22 +840,40 @@ async function submitQuickCust() {
   const opening_balance = parseFloat(document.getElementById('quick-cust-balance').value) || 0;
   
   if (!name) return alert('Customer Name is required!');
-  if (!phone) return alert('Customer Phone number is required!');
   
   try {
-    const res = await fetch('/customers/api/quick-add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        name, phone, address, city, state, pincode, gstin, email, opening_balance 
-      })
-    });
-    const result = await res.json();
-    if (result.success && result.customer) {
-      closeQuickCustModal();
-      selectCustomer(result.customer);
+    if (custId) {
+      // Edit existing customer in master list
+      const res = await fetch(`/customers/api/edit/${custId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name, phone, address, city, state, pincode, gstin, email 
+        })
+      });
+      const result = await res.json();
+      if (result.success && result.customer) {
+        closeQuickCustModal();
+        selectCustomer(result.customer);
+      } else {
+        alert(result.error || 'Failed to update customer');
+      }
     } else {
-      alert(result.error || 'Failed to add customer');
+      // Add new customer
+      const res = await fetch('/customers/api/quick-add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name, phone, address, city, state, pincode, gstin, email, opening_balance 
+        })
+      });
+      const result = await res.json();
+      if (result.success && result.customer) {
+        closeQuickCustModal();
+        selectCustomer(result.customer);
+      } else {
+        alert(result.error || 'Failed to add customer');
+      }
     }
   } catch(err) {
     console.error(err);

@@ -93,6 +93,47 @@ router.post('/api/quick-add', async (req, res) => {
   }
 });
 
+router.get('/api/:id', async (req, res) => {
+  try {
+    const dbRes = await getDb().query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
+    if (dbRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Customer not found' });
+    res.json({ success: true, customer: dbRes.rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch customer: ' + err.message });
+  }
+});
+
+router.post('/api/edit/:id', async (req, res) => {
+  const { name, phone, email, address, gstin, city, state, pincode } = req.body;
+  if (!name) return res.status(400).json({ success: false, error: 'Customer Name is required' });
+  try {
+    const dbRes = await getDb().query(`
+      UPDATE customers 
+      SET name = $1, phone = $2, email = $3, address = $4, gstin = $5, city = $6, state = $7, pincode = $8, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $9
+      RETURNING *
+    `, [
+      name.trim(),
+      phone ? phone.trim() : '',
+      email ? email.trim() : '',
+      address ? address.trim() : '',
+      gstin ? gstin.trim().toUpperCase() : '',
+      city ? city.trim() : 'Chennai',
+      state ? state.trim() : 'Tamil Nadu',
+      pincode ? pincode.trim() : '',
+      req.params.id
+    ]);
+    if (dbRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Customer not found' });
+    }
+    const customer = dbRes.rows[0];
+    res.json({ success: true, customer });
+  } catch (err) {
+    console.error('Quick edit customer error:', err);
+    res.status(500).json({ success: false, error: 'Failed to update customer: ' + err.message });
+  }
+});
+
 router.get('/edit/:id', async (req, res) => {
   try {
     const dbRes = await getDb().query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
